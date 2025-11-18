@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Asset Manager - Dashboard</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <style>
+        /* Additional styles specific to asset manager */
+        .dashboard-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .user-welcome {
+            flex: 1;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .stats-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 2em;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            font-size: 0.9em;
+            opacity: 0.9;
+        }
+
+        .assets-section {
+            margin-top: 30px;
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .assets-grid {
+            display: grid;
+            gap: 20px;
+        }
+
+        .asset-card {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .asset-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .asset-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 15px;
+        }
+
+        .asset-name {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #333;
+            margin: 0;
+        }
+
+        .asset-status {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8em;
+            font-weight: bold;
+        }
+
+        .status-active {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-inactive {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .asset-details {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .detail-item {
+            margin-bottom: 5px;
+        }
+
+        .detail-label {
+            font-weight: bold;
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        .detail-value {
+            color: #333;
+        }
+
+        .asset-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .btn-sm {
+            padding: 8px 15px;
+            font-size: 0.9em;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.visible {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 500px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .close-modal {
+            background: none;
+            border: none;
+            font-size: 1.5em;
+            cursor: pointer;
+            color: #666;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+
+        .logout-btn {
+            background: #e74c3c;
+        }
+
+        .logout-btn:hover {
+            background: #c0392b;
+        }
+
+        .btn-danger {
+            background: #e74c3c;
+            border-color: #e74c3c;
+        }
+
+        .btn-danger:hover {
+            background: #c0392b;
+            border-color: #c0392b;
+        }
+
+        .btn-secondary {
+            background: #95a5a6;
+            border-color: #95a5a6;
+        }
+
+        .btn-secondary:hover {
+            background: #7f8c8d;
+            border-color: #7f8c8d;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Dashboard Header -->
+        <div class="dashboard-header">
+            <div class="user-welcome">
+                <h1>🏢 Asset Manager</h1>
+                <p>Welcome, <span id="user-email-display">User</span></p>
+            </div>
+            <div class="header-actions">
+                <button class="auth-btn" onclick="showAddAssetModal()">+ Add Asset</button>
+                <button class="auth-btn logout-btn" onclick="logout()">Logout</button>
+            </div>
+        </div>
+
+        <!-- Statistics Cards -->
+        <div class="stats-cards">
+            <div class="stat-card">
+                <div class="stat-number" id="total-assets">0</div>
+                <div class="stat-label">Total Assets</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="total-value">$0</div>
+                <div class="stat-label">Total Value</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="active-assets">0</div>
+                <div class="stat-label">Active Assets</div>
+            </div>
+        </div>
+
+        <!-- Assets Section -->
+        <div class="assets-section">
+            <div class="section-header">
+                <h2>Your Assets</h2>
+                <div class="header-actions">
+                    <input type="text" id="search-assets" placeholder="Search assets..." class="form-group input" style="width: 200px;">
+                </div>
+            </div>
+
+            <div id="assets-loading" class="loading">
+                <p>Loading assets...</p>
+            </div>
+
+            <div id="assets-empty" class="empty-state hidden">
+                <p>No assets found. Add your first asset to get started!</p>
+                <button class="auth-btn mt-20" onclick="showAddAssetModal()">Add Your First Asset</button>
+            </div>
+
+            <div id="assets-grid" class="assets-grid hidden">
+                <!-- Assets will be loaded here dynamically -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Asset Modal -->
+    <div id="add-asset-modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Add New Asset</h2>
+                <button class="close-modal" onclick="hideAddAssetModal()">&times;</button>
+            </div>
+            <form id="add-asset-form">
+                <div class="form-group">
+                    <label for="asset-name">Asset Name *</label>
+                    <input type="text" id="asset-name" required>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="asset-category">Category</label>
+                        <select id="asset-category">
+                            <option value="">Select Category</option>
+                            <option value="Electronics">Electronics</option>
+                            <option value="Furniture">Furniture</option>
+                            <option value="Equipment">Equipment</option>
+                            <option value="Vehicles">Vehicles</option>
+                            <option value="Software">Software</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="asset-value">Value ($)</label>
+                        <input type="number" id="asset-value" step="0.01" min="0">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="purchase-date">Purchase Date</label>
+                        <input type="date" id="purchase-date">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="asset-status">Status</label>
+                        <select id="asset-status">
+                            <option value="active">Active</option>
+                            <option value="inactive">Inactive</option>
+                            <option value="maintenance">Maintenance</option>
+                            <option value="retired">Retired</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="asset-description">Description</label>
+                    <textarea id="asset-description" rows="3" placeholder="Optional description..."></textarea>
+                </div>
+
+                <div class="form-group">
+                    <button type="submit" class="submit-btn">Add Asset</button>
+                    <button type="button" class="submit-btn btn-secondary" onclick="hideAddAssetModal()">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Initialize Supabase
+        const supabaseUrl = 'https://xmyghazzncifnciwjnms.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhteWdoYXp6bmNpZm5jaXdqbm1zIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI3NjgxNDEsImV4cCI6MjA3ODM0NDE0MX0.2XG7ZRS2tZEFDOErbgYrrwuiwXlqsi3H6YzmUeNULq4';
+        const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
+
+        // Check authentication
+        async function checkAuth() {
+            const { data: { session }, error } = await supabaseClient.auth.getSession();
+            if (!session) {
+                window.location.href = 'index.html';
+                return false;
+            }
+            
+            document.getElementById('user-email-display').textContent = session.user.email;
+            return true;
+        }
+
+        // Load assets from Supabase
+        async function loadAssets() {
+            const { data: assets, error } = await supabaseClient
+                .from('assets')
+                .select('*')
+                .order('created_at', { ascending: false });
+
+            if (error) {
+                console.error('Error loading assets:', error);
+                alert('Error loading assets: ' + error.message);
+                return;
+            }
+
+            displayAssets(assets);
+            updateStats(assets);
+        }
+
+        // Display assets in the grid
+        function displayAssets(assets) {
+            const assetsGrid = document.getElementById('assets-grid');
+            const loadingElement = document.getElementById('assets-loading');
+            const emptyElement = document.getElementById('assets-empty');
+
+            loadingElement.classList.add('hidden');
+
+            if (assets.length === 0) {
+                emptyElement.classList.remove('hidden');
+                assetsGrid.classList.add('hidden');
+                return;
+            }
+
+            emptyElement.classList.add('hidden');
+            assetsGrid.classList.remove('hidden');
+
+            assetsGrid.innerHTML = assets.map(asset => `
+                <div class="asset-card" data-asset-id="${asset.id}">
+                    <div class="asset-header">
+                        <h3 class="asset-name">${asset.name}</h3>
+                        <span class="asset-status status-${asset.status}">${asset.status}</span>
+                    </div>
+                    
+                    <div class="asset-details">
+                        <div class="detail-item">
+                            <div class="detail-label">Category</div>
+                            <div class="detail-value">${asset.category || 'N/A'}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Value</div>
+                            <div class="detail-value">${asset.value ? '$' + Number(asset.value).toFixed(2) : 'N/A'}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Purchase Date</div>
+                            <div class="detail-value">${asset.purchase_date || 'N/A'}</div>
+                        </div>
+                    </div>
+
+                    ${asset.description ? `
+                        <div class="detail-item">
+                            <div class="detail-label">Description</div>
+                            <div class="detail-value">${asset.description}</div>
+                        </div>
+                    ` : ''}
+
+                    <div class="asset-actions">
+                        <button class="auth-btn btn-sm btn-secondary" onclick="editAsset(${asset.id})">Edit</button>
+                        <button class="auth-btn btn-sm btn-danger" onclick="deleteAsset(${asset.id})">Delete</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Update statistics
+        function updateStats(assets) {
+            const totalAssets = assets.length;
+            const totalValue = assets.reduce((sum, asset) => sum + (parseFloat(asset.value) || 0), 0);
+            const activeAssets = assets.filter(asset => asset.status === 'active').length;
+
+            document.getElementById('total-assets').textContent = totalAssets;
+            document.getElementById('total-value').textContent = '$' + totalValue.toFixed(2);
+            document.getElementById('active-assets').textContent = activeAssets;
+        }
+
+        // Modal functions
+        function showAddAssetModal() {
+            document.getElementById('add-asset-modal').classList.add('visible');
+        }
+
+        function hideAddAssetModal() {
+            document.getElementById('add-asset-modal').classList.remove('visible');
+            document.getElementById('add-asset-form').reset();
+        }
+
+        // Add new asset
+        document.getElementById('add-asset-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const assetData = {
+                name: document.getElementById('asset-name').value,
+                category: document.getElementById('asset-category').value,
+                value: document.getElementById('asset-value').value || null,
+                purchase_date: document.getElementById('purchase-date').value || null,
+                status: document.getElementById('asset-status').value,
+                description: document.getElementById('asset-description').value || null
+            };
+
+            const { data, error } = await supabaseClient
+                .from('assets')
+                .insert([assetData])
+                .select();
+
+            if (error) {
+                console.error('Error adding asset:', error);
+                alert('Error adding asset: ' + error.message);
+            } else {
+                console.log('Asset added successfully:', data);
+                hideAddAssetModal();
+                loadAssets();
+                alert('Asset added successfully!');
+            }
+        });
+
+        // Delete asset
+        async function deleteAsset(assetId) {
+            if (confirm('Are you sure you want to delete this asset?')) {
+                const { error } = await supabaseClient
+                    .from('assets')
+                    .delete()
+                    .eq('id', assetId);
+
+                if (error) {
+                    console.error('Error deleting asset:', error);
+                    alert('Error deleting asset: ' + error.message);
+                } else {
+                    loadAssets();
+                    alert('Asset deleted successfully!');
+                }
+            }
+        }
+
+        // Edit asset (placeholder for now)
+        function editAsset(assetId) {
+            alert('Edit functionality coming soon! Asset ID: ' + assetId);
+            // You can implement edit modal similar to add modal
+        }
+
+        // Logout function
+        async function logout() {
+            await supabaseClient.auth.signOut();
+            window.location.href = 'index.html';
+        }
+
+        // Search functionality
+        document.getElementById('search-assets').addEventListener('input', async (e) => {
+            const searchTerm = e.target.value.toLowerCase();
+            
+            if (searchTerm.length === 0) {
+                loadAssets();
+                return;
+            }
+
+            const { data: assets, error } = await supabaseClient
+                .from('assets')
+                .select('*')
+                .or(`name.ilike.%${searchTerm}%,category.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%`)
+                .order('created_at', { ascending: false });
+
+            if (!error) {
+                displayAssets(assets);
+                updateStats(assets);
+            }
+        });
+
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', async function() {
+            const authenticated = await checkAuth();
+            if (authenticated) {
+                loadAssets();
+            }
+        });
+    </script>
+</body>
+</html>

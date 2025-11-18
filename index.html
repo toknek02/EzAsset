@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Asset Management System</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <div class="container">
+        <!-- Landing Page -->
+        <div id="landing-page" class="landing-page">
+            <div class="logo">
+                <h1>🏢 Asset Manager</h1>
+                <p>Manage your company assets efficiently</p>
+            </div>
+            
+            <div class="auth-options">
+                <button class="auth-btn" onclick="showLoginForm('user')">
+                    👤 User Login
+                </button>
+                <button class="auth-btn admin" onclick="showLoginForm('admin')">
+                    🔧 Admin Login
+                </button>
+                
+                <div class="divider">
+                    <span>or</span>
+                </div>
+                
+                <button class="auth-btn" onclick="showSignupForm()">
+                    📝 Create Account
+                </button>
+            </div>
+        </div>
+
+        <!-- Login Form -->
+        <div id="login-form" class="auth-form hidden">
+            <h2 id="form-title" class="text-center mb-20">Login</h2>
+            <div id="error-message" class="error-message hidden"></div>
+            
+            <form id="login-form-element">
+                <div class="form-group">
+                    <label for="email">Email</label>
+                    <input type="email" id="email" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" required>
+                </div>
+                
+                <button type="submit" class="submit-btn" id="login-submit-btn">Login</button>
+                <button type="button" class="submit-btn back-btn" onclick="showLandingPage()">Back</button>
+            </form>
+        </div>
+
+        <!-- Signup Form -->
+        <div id="signup-form" class="auth-form hidden">
+            <h2 class="text-center mb-20">Create Account</h2>
+            <div id="signup-error-message" class="error-message hidden"></div>
+            
+            <form id="signup-form-element">
+                <div class="form-group">
+                    <label for="signup-email">Email</label>
+                    <input type="email" id="signup-email" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="signup-password">Password</label>
+                    <input type="password" id="signup-password" required minlength="6">
+                </div>
+
+                <div class="form-group">
+                    <label for="user-role">I am a:</label>
+                    <select id="user-role">
+                        <option value="user">Regular User</option>
+                        <option value="admin">Administrator</option>
+                    </select>
+                </div>
+                
+                <button type="submit" class="submit-btn">Create Account</button>
+                <button type="button" class="submit-btn back-btn" onclick="showLandingPage()">Back</button>
+            </form>
+        </div>
+
+        <!-- User Dashboard -->
+        <div id="user-dashboard" class="user-info hidden">
+            <h2>Welcome!</h2>
+            <p class="user-email" id="user-email"></p>
+            <p class="user-role" id="user-role-display"></p>
+            <button class="auth-btn" onclick="enterApp()">Enter Application</button>
+            <button class="auth-btn admin mt-20" onclick="logout()">Logout</button>
+        </div>
+    </div>
+
+    <script>
+        // Initialize Supabase
+        const supabaseUrl = 'https://xmyghazzncifnciwjnms.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhteWdoYXp6bmNpZm5jaXdqbm1zIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI3NjgxNDEsImV4cCI6MjA3ODM0NDE0MX0.2XG7ZRS2tZEFDOErbgYrrwuiwXlqsi3H6YzmUeNULq4';
+        const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
+
+        let currentRole = 'user';
+
+        // UI Management functions
+        function showElement(id) {
+            document.getElementById(id).classList.remove('hidden');
+            document.getElementById(id).classList.add('visible');
+        }
+
+        function hideElement(id) {
+            document.getElementById(id).classList.remove('visible');
+            document.getElementById(id).classList.add('hidden');
+        }
+
+        // Check if user is already logged in
+        async function checkAuth() {
+            const { data: { session }, error } = await supabaseClient.auth.getSession();
+            if (session) {
+                showUserDashboard(session.user);
+            }
+        }
+
+        // Show login form
+        function showLoginForm(role) {
+            currentRole = role;
+            hideElement('landing-page');
+            hideElement('signup-form');
+            hideElement('user-dashboard');
+            showElement('login-form');
+            
+            document.getElementById('form-title').textContent = 
+                role === 'admin' ? 'Admin Login' : 'User Login';
+        }
+
+        // Show signup form
+        function showSignupForm() {
+            hideElement('landing-page');
+            hideElement('login-form');
+            hideElement('user-dashboard');
+            showElement('signup-form');
+        }
+
+        // Show landing page
+        function showLandingPage() {
+            hideElement('login-form');
+            hideElement('signup-form');
+            hideElement('user-dashboard');
+            showElement('landing-page');
+            clearErrors();
+        }
+
+        // Show user dashboard
+        function showUserDashboard(user) {
+            hideElement('landing-page');
+            hideElement('login-form');
+            hideElement('signup-form');
+            showElement('user-dashboard');
+            
+            document.getElementById('user-email').textContent = user.email;
+            // In a real app, you'd fetch the user's role from your database
+            document.getElementById('user-role-display').textContent = 'Role: User';
+        }
+
+        // Clear error messages
+        function clearErrors() {
+            hideElement('error-message');
+            hideElement('signup-error-message');
+        }
+
+        // Show error message
+        function showError(message, isSignup = false) {
+            const errorElement = isSignup ? 
+                document.getElementById('signup-error-message') : 
+                document.getElementById('error-message');
+            
+            errorElement.textContent = message;
+            showElement(isSignup ? 'signup-error-message' : 'error-message');
+        }
+
+        // Handle login form submission
+        document.getElementById('login-form-element').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+
+            const { data, error } = await supabaseClient.auth.signInWithPassword({
+                email: email,
+                password: password
+            });
+
+            if (error) {
+                showError(error.message);
+            } else {
+                showUserDashboard(data.user);
+            }
+        });
+
+        // Handle signup form submission
+        document.getElementById('signup-form-element').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const email = document.getElementById('signup-email').value;
+            const password = document.getElementById('signup-password').value;
+            const role = document.getElementById('user-role').value;
+
+            const { data, error } = await supabaseClient.auth.signUp({
+                email: email,
+                password: password,
+                options: {
+                    data: {
+                        role: role
+                    }
+                }
+            });
+
+            if (error) {
+                showError(error.message, true);
+            } else {
+                alert('Account created successfully! Please check your email for verification.');
+                showLandingPage();
+            }
+        });
+
+        // Logout function
+        async function logout() {
+            await supabaseClient.auth.signOut();
+            showLandingPage();
+        }
+
+        // Enter application (redirect to asset manager)
+        function enterApp() {
+            // For now, we'll just show an alert
+            alert('Redirecting to Asset Manager...');
+            // In production, you would redirect to your asset manager page:
+            window.location.href = 'asset-manager.html';
+        }
+
+        // Check authentication on page load
+        document.addEventListener('DOMContentLoaded', checkAuth);
+    </script>
+</body>
+</html>

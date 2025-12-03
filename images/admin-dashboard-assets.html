@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Manage Assets - AzAsset</title>
+    <link rel="stylesheet" href="style.css">
+
+    <!-- Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <script src="firebase-config.js"></script>
+
+    <style>
+        body {
+            background: linear-gradient(135deg, #0a0f1f, #1a2337, #0b1528);
+            background-size: cover;
+            background-attachment: fixed;
+
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+
+            min-height: 100vh;
+            padding-top: 130px;
+        }
+
+        header {
+            background: rgba(0,0,0,0.4);
+            backdrop-filter: blur(8px);
+            border-bottom: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .filter-row {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .filter-input, .filter-select {
+            padding: 10px;
+            border-radius: 10px;
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            font-size: 1em;
+            backdrop-filter: blur(10px);
+            width: 200px;
+        }
+
+        /* ===== MODAL BACKDROP ===== */
+        .modal-bg {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.65);
+            backdrop-filter: blur(3px);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+        }
+
+        /* ===== MODAL BOX ===== */
+        .modal-box {
+            width: 420px;
+            background: rgba(255,255,255,0.1);
+            border: 2px solid rgba(255,255,255,0.25);
+            border-radius: 20px;
+            padding: 25px;
+            backdrop-filter: blur(20px);
+            box-shadow: 0 0 30px black;
+            animation: fadeIn .3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.9); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        .modal-title {
+            color: white;
+            font-size: 1.6em;
+            text-align: center;
+            margin-bottom: 15px;
+            text-shadow: 1px 1px 4px lightblue;
+        }
+
+        .close-btn {
+            background: #ff4d4d;
+            border: none;
+            padding: 10px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-top: 10px;
+            width: 100%;
+            font-weight: bold;
+        }
+
+        .modal-field {
+            width: 100%;
+            margin-bottom: 12px;
+            padding: 10px;
+            border-radius: 10px;
+            border: none;
+            background: rgba(255,255,255,0.2);
+            color: white;
+        }
+
+        .modal-label {
+            color: lightblue;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+
+<body>
+
+<header>
+    <h2 class="logo">AzAsset</h2>
+    <nav class="navigation">
+        <a href="admin-home.html">Admin Home</a>
+        <button class="btnLogin-popup" onclick="logout()">Logout</button>
+    </nav>
+</header>
+
+<div class="dashboard-container">
+
+    <h1 class="dashboard-title">Manage Assets</h1>
+
+    <!-- Filters -->
+    <div class="filter-row">
+        <input id="searchInput" class="filter-input" placeholder="Search asset name..." oninput="loadAssets()">
+
+        <select id="expiryFilter" class="filter-select" onchange="loadAssets()">
+            <option value="all">All</option>
+            <option value="soon">Expiring Soon</option>
+            <option value="expired">Expired</option>
+        </select>
+
+        <select id="departmentFilter" class="filter-select" style="display:none;" onchange="loadAssets()">
+            <option value="all">All Departments</option>
+            <option value="IT">IT</option>
+            <option value="Finance">Finance</option>
+            <option value="HR">HR</option>
+            <option value="Logistics">Logistics</option>
+        </select>
+    </div>
+
+    <!-- Add Asset Panel -->
+    <div class="dashboard-panel">
+        <h2>Add New Asset</h2>
+
+        <form onsubmit="addAsset(event)">
+            <input id="name" class="dashboard-input" placeholder="Asset Name" required>
+            <input id="description" class="dashboard-input" placeholder="Description (optional)">
+            
+            <label>Purchase Date</label>
+            <input id="purchaseDate" class="dashboard-input" type="date" required>
+
+            <label>Expiry Date</label>
+            <input id="expiryDate" class="dashboard-input" type="date" required onchange="autoCalculateReminder()">
+
+            <input id="remindBeforeDays" class="dashboard-input" type="number" style="display:none;">
+
+            <select id="departmentSelect" class="dashboard-input" style="color:white;">
+                <option value="" disabled selected>Select Department</option>
+                <option value="IT">IT</option>
+                <option value="Finance">Finance</option>
+                <option value="HR">HR</option>
+                <option value="Logistics">Logistics</option>
+            </select>
+
+            <button type="submit" class="dashboard-btn">Save Asset</button>
+        </form>
+    </div>
+
+    <!-- Asset List Panel -->
+    <div class="dashboard-panel">
+        <h2>Assets</h2>
+        <div id="assetList"></div>
+    </div>
+
+</div>
+
+<!-- ============================================
+     EDIT MODAL
+=============================================== -->
+<div id="editModal" class="modal-bg">
+    <div class="modal-box">
+
+        <div class="modal-title">Edit Asset</div>
+
+        <label class="modal-label">Name</label>
+        <input id="edit-name" class="modal-field">
+
+        <label class="modal-label">Description</label>
+        <input id="edit-description" class="modal-field">
+
+        <label class="modal-label">Purchase Date</label>
+        <input id="edit-purchaseDate" class="modal-field" type="date">
+
+        <label class="modal-label">Expiry Date</label>
+        <input id="edit-expiryDate" class="modal-field" type="date" onchange="autoEditReminder()">
+
+        <input id="edit-remindBeforeDays" type="hidden">
+
+        <!-- Admin department selection -->
+        <div id="edit-dep-wrapper">
+            <label class="modal-label">Department</label>
+            <select id="edit-department" class="modal-field">
+                <option value="IT">IT</option>
+                <option value="Finance">Finance</option>
+                <option value="HR">HR</option>
+                <option value="Logistics">Logistics</option>
+            </select>
+        </div>
+
+        <button onclick="saveEdit()" class="dashboard-btn">Save Changes</button>
+        <button onclick="closeEditModal()" class="close-btn">Close</button>
+    </div>
+</div>
+
+<!-- ============================================
+     VIEW MODAL
+=============================================== -->
+<div id="viewModal" class="modal-bg">
+    <div class="modal-box">
+
+        <div class="modal-title">Asset Details</div>
+
+        <div id="viewContent" style="color:white; font-size:1em; line-height:1.6em;"></div>
+
+        <button onclick="closeViewModal()" class="close-btn">Close</button>
+    </div>
+</div>
+
+<script>
+/* ------------------------------
+   AUTH LOAD
+------------------------------ */
+let currentUserRole = "";
+let currentUserDepartment = "";
+let editingAssetId = null;
+
+auth.onAuthStateChanged(async user => {
+    if (!user) return window.location.href = "login.html";
+
+    const userDoc = await db.collection("users").doc(user.uid).get();
+    currentUserRole = userDoc.data().role;
+    currentUserDepartment = userDoc.data().department;
+
+    if (currentUserRole === "admin") {
+        document.getElementById("departmentFilter").style.display = "block";
+    } else {
+        document.getElementById("departmentSelect").style.display = "none";
+        document.getElementById("edit-dep-wrapper").style.display = "none";
+    }
+
+    loadAssets();
+});
+
+/* ------------------------------
+   LOGOUT
+------------------------------ */
+function logout() {
+    auth.signOut().then(() => window.location.href = "login.html");
+}
+
+/* ------------------------------
+   ADD ASSET
+------------------------------ */
+function addAsset(e) {
+    e.preventDefault();
+    const user = auth.currentUser;
+
+    const nameVal = name.value.trim();
+    const descriptionVal = description.value.trim();
+    const purchaseDateVal = purchaseDate.value;
+    const expiryDateVal = expiryDate.value;
+    const remindBeforeVal = parseInt(remindBeforeDays.value);
+
+    let department = currentUserDepartment;
+
+    if (currentUserRole === "admin") {
+        department = departmentSelect.value;
+        if (!department) return alert("Select a department.");
+    }
+
+    const newAsset = {
+        name: nameVal,
+        description: descriptionVal,
+        purchaseDate: purchaseDateVal,
+        expiryDate: expiryDateVal,
+        remindBeforeDays: remindBeforeVal,
+        department,
+        userId: user.uid,
+        createdBy: user.email,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    };
+
+    db.collection("assets")
+        .add(newAsset)
+        .then(() => {
+            alert("Asset added!");
+            loadAssets();
+        });
+}
+
+/* ------------------------------
+   LOAD ASSETS
+------------------------------ */
+function loadAssets() {
+    const searchText = searchInput.value.toLowerCase();
+    const expiryFilter = expiryFilter.value;
+    const departmentFilterValue = departmentFilter.value;
+
+    let query = db.collection("assets");
+
+    if (currentUserRole !== "admin") {
+        query = query.where("department", "==", currentUserDepartment);
+    }
+
+    query.orderBy("createdAt", "desc").get().then(snapshot => {
+        let html = "";
+
+        snapshot.forEach(doc => {
+            const a = doc.data();
+            const id = doc.id;
+
+            // SEARCH
+            if (!a.name.toLowerCase().includes(searchText)) return;
+
+            // DEPARTMENT FILTER
+            if (currentUserRole === "admin" &&
+                departmentFilterValue !== "all" &&
+                a.department !== departmentFilterValue) return;
+
+            const today = new Date();
+            const expiry = new Date(a.expiryDate);
+            const diffDays = Math.ceil((expiry - today) / (1000*60*60*24));
+
+            let statusClass = "safe";
+            let statusText = `Expires in ${diffDays} days`;
+
+            if (diffDays <= 0) {
+                statusClass = "expired";
+                statusText = "Expired!";
+            } else if (diffDays <= a.remindBeforeDays) {
+                statusClass = "expiring-soon";
+                statusText = `Expiring Soon (${diffDays} days left)`;
+            }
+
+            // EXPIRY FILTER
+            if (expiryFilter === "soon" && !(diffDays > 0 && diffDays <= a.remindBeforeDays)) return;
+            if (expiryFilter === "expired" && diffDays > 0) return;
+
+            html += `
+                <div class="asset-card">
+                    <div class="asset-name">${a.name} (${a.department})</div>
+                    <div>Description: ${a.description || "None"}</div>
+                    <div>Expiry Date: ${a.expiryDate}</div>
+                    <div class="${statusClass}">${statusText}</div>
+                    <div>Created By: ${a.createdBy || "Unknown"}</div>
+
+                    <button class="dashboard-btn" onclick="openViewModal('${id}')">View</button>
+                    ${
+                        currentUserRole === "admin" ||
+                        a.department === currentUserDepartment
+                        ? `<button class="dashboard-btn" onclick="openEditModal('${id}')">Edit</button>
+                           <button class="delete-btn" onclick="deleteAsset('${id}')">Delete</button>`
+                        : ""
+                    }
+                </div>
+            `;
+        });
+
+        document.getElementById("assetList").innerHTML = html || "<p>No assets found</p>";
+    });
+}
+
+/* ============================================================
+   VIEW MODAL
+============================================================ */
+function openViewModal(id) {
+    db.collection("assets").doc(id).get().then(doc => {
+        const a = doc.data();
+
+        const today = new Date();
+        const expiry = new Date(a.expiryDate);
+        const diffDays = Math.ceil((expiry - today) / (1000 * 60 * 60 * 24));
+
+        document.getElementById("viewContent").innerHTML = `
+            <strong>Name:</strong> ${a.name}<br>
+            <strong>Department:</strong> ${a.department}<br>
+            <strong>Description:</strong> ${a.description || "None"}<br>
+            <strong>Purchase Date:</strong> ${a.purchaseDate}<br>
+            <strong>Expiry Date:</strong> ${a.expiryDate}<br>
+            <strong>Days Left:</strong> ${diffDays}<br>
+            <strong>Created By:</strong> ${a.createdBy}<br>
+        `;
+
+        document.getElementById("viewModal").style.display = "flex";
+    });
+}
+
+function closeViewModal() {
+    document.getElementById("viewModal").style.display = "none";
+}
+
+/* ============================================================
+   EDIT MODAL
+============================================================ */
+function openEditModal(id) {
+    editingAssetId = id;
+
+    db.collection("assets").doc(id).get().then(doc => {
+        const a = doc.data();
+
+        document.getElementById("edit-name").value = a.name;
+        document.getElementById("edit-description").value = a.description;
+        document.getElementById("edit-purchaseDate").value = a.purchaseDate;
+        document.getElementById("edit-expiryDate").value = a.expiryDate;
+        document.getElementById("edit-remindBeforeDays").value = a.remindBeforeDays;
+
+        if (currentUserRole === "admin") {
+            document.getElementById("edit-department").value = a.department;
+        }
+
+        document.getElementById("editModal").style.display = "flex";
+    });
+}
+
+function closeEditModal() {
+    document.getElementById("editModal").style.display = "none";
+}
+
+/* ============================================================
+   SAVE EDIT
+============================================================ */
+function saveEdit() {
+    const updated = {
+        name: document.getElementById("edit-name").value.trim(),
+        description: document.getElementById("edit-description").value.trim(),
+        purchaseDate: document.getElementById("edit-purchaseDate").value,
+        expiryDate: document.getElementById("edit-expiryDate").value,
+        remindBeforeDays: parseInt(document.getElementById("edit-remindBeforeDays").value)
+    };
+
+    if (currentUserRole === "admin") {
+        updated.department = document.getElementById("edit-department").value;
+    }
+
+    db.collection("assets").doc(editingAssetId).update(updated)
+        .then(() => {
+            alert("Asset updated!");
+            closeEditModal();
+            loadAssets();
+        });
+}
+
+/* ============================================================
+   AUTO-CALCULATE FOR EDIT & ADD
+============================================================ */
+function autoCalculateReminder() {
+    const expiry = new Date(document.getElementById("expiryDate").value);
+    const today = new Date();
+
+    const diffDays = Math.ceil((expiry - today) / (1000*60*60*24));
+    document.getElementById("remindBeforeDays").value = diffDays > 0 ? diffDays : 0;
+}
+
+function autoEditReminder() {
+    const expiry = new Date(document.getElementById("edit-expiryDate").value);
+    const today = new Date();
+
+    const diffDays = Math.ceil((expiry - today) / (1000*60*60*24));
+    document.getElementById("edit-remindBeforeDays").value = diffDays > 0 ? diffDays : 0;
+}
+
+</script>
+
+</body>
+</html>

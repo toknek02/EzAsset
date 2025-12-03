@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Admin Dashboard - AzAsset</title>
+    <link rel="stylesheet" href="style.css">
+
+    <!-- Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <script src="firebase-config.js"></script>
+
+    <style>
+        body {
+            background: linear-gradient(135deg, #0a0f1f, #1a2337, #0b1528);
+            background-size: cover;
+            background-attachment: fixed;
+            display: block;
+            padding-top: 130px;
+        }
+
+        /* Center the cards nicely */
+        .admin-menu {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 35px;
+            width: 85%;
+            max-width: 900px;
+            margin: auto;
+            margin-top: 40px;
+        }
+
+        .menu-card {
+            background: rgba(255,255,255,0.12);
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 20px;
+            padding: 35px;
+            text-align: center;
+            backdrop-filter: blur(20px);
+            box-shadow: 0 0 20px black;
+            cursor: pointer;
+            transition: .3s;
+        }
+
+        .menu-card:hover {
+            transform: scale(1.07);
+            background: rgba(255,255,255,0.18);
+        }
+
+        .menu-title {
+            font-size: 1.5em;
+            color: rgb(255, 255, 255);
+            margin-bottom: 8px;
+            text-shadow: 1px 1px 4px lightblue;
+        }
+
+        .menu-desc {
+            font-size: 0.95em;
+            color: whitesmoke;
+            opacity: 0.85;
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <h2 class="logo">AzAsset</h2>
+        <nav class="navigation">
+            <a href="#" onclick="logout()">Logout</a>
+        </nav>
+    </header>
+
+    <h1 class="dashboard-title">Admin Control Panel</h1>
+
+    <!-- ONLY 4 OPTIONS NOW -->
+    <div class="admin-menu">
+
+        <div class="menu-card" onclick="go('admin-dashboard.html')">
+            <div class="menu-title">Manage Assets</div>
+            <div class="menu-desc">Add, edit, delete & view all assets</div>
+        </div>
+
+        <div class="menu-card" onclick="go('admin-dashboard-users.html')">
+            <div class="menu-title">Manage Users</div>
+            <div class="menu-desc">View users, change roles & departments</div>
+        </div>
+
+        <div class="menu-card" onclick="go('admin-dashboard-departments.html')">
+            <div class="menu-title">Departments</div>
+            <div class="menu-desc">View assets grouped by department</div>
+        </div>
+
+        <div class="menu-card" onclick="go('admin-dashboard-expiring.html')">
+            <div class="menu-title">Expired / Expiring</div>
+            <div class="menu-desc">Items expiring soon or already expired</div>
+        </div>
+
+    </div>
+
+    <script>
+        auth.onAuthStateChanged(async user => {
+            if (!user) return window.location.href = "login.html";
+
+            const userDoc = await db.collection("users").doc(user.uid).get();
+            if (!userDoc.exists || userDoc.data().role !== "admin") {
+                alert("Access denied: Admins only");
+                return window.location.href = "login.html";
+            }
+        });
+
+        function go(page) {
+            window.location.href = page;
+        }
+
+        function logout() {
+            auth.signOut().then(() => window.location.href = "login.html");
+        }
+    </script>
+
+</body>
+</html>

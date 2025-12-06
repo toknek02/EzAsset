@@ -1,0 +1,16 @@
+name,description,purchaseDate,expiryDate,department,status
+Laptop Dell Latitude,Business laptop,2023-02-01,2026-02-01,IT,approved
+Desktop PC,i5 Office PC,2022-06-10,2025-06-10,IT,approved
+Network Switch,Core 24 Port,2021-08-20,2024-08-20,IT,approved
+Printer HP LaserJet,Office printer,2023-01-15,2026-01-15,Finance,approved
+Accounting Software License,Annual subscription,2024-01-01,2025-01-01,Finance,approved
+Projector Epson,Meeting room projector,2022-05-12,2025-05-12,Finance,approved
+HR Management Software,SaaS license,2023-03-01,2026-03-01,HR,approved
+Fingerprint Scanner,Attendance device,2023-06-01,2025-06-01,HR,approved
+Training Management Platform,Online LMS,2023-09-01,2025-09-01,HR,pending
+Forklift Battery,Warehouse unit,2023-02-15,2025-02-15,Logistics,approved
+Warehouse CCTV,Security system,2022-08-01,2025-08-01,Logistics,approved
+Delivery Van,Company vehicle,2022-01-01,2026-01-01,Logistics,pending
+Router Asus,Office router,2023-01-10,2026-01-10,IT,approved
+Server Rack Storage,Data center rack,2022-07-01,2027-07-01,IT,pending
+Archive Shelving,Steel racking,2021-09-01,2026-09-01,Logistics,approved

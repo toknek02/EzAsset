@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>User Assets - AzAsset</title>
+<link rel="stylesheet" href="style.css">
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+<script src="firebase-config.js"></script>
+
+<style>
+/* Minimal AQUA theme */
+body{
+    background:#022733;
+    color:#e9ffff;
+    font-family:system-ui, sans-serif;
+    margin:0;
+    padding-top:120px;
+}
+
+.dashboard-title{
+    text-align:center;
+    color:#c4fbff;
+    margin:0 0 18px;
+    font-weight:600;
+}
+
+.dashboard-container{width:92%;max-width:900px;margin:auto;}
+
+.dashboard-panel{
+    background:#033c50;
+    border-radius:10px;
+    padding:15px;
+    margin-bottom:15px;
+}
+
+.dashboard-input{
+    width:100%;
+    padding:10px;
+    border-radius:6px;
+    border:1px solid #0a657d;
+    background:#024554;
+    color:#e9ffff;
+}
+
+.dashboard-btn{
+    padding:10px 14px;
+    border-radius:6px;
+    border:none;
+    background:#04d9ff;
+    color:#002026;
+    font-weight:600;
+    cursor:pointer;
+}
+.dashboard-btn:hover{
+    background:#53e8ff;
+}
+
+/* Table */
+.table-wrap{overflow:auto;}
+.asset-table{width:100%;border-collapse:collapse;}
+.asset-table thead th{
+    background:#024757;
+    font-weight:600;
+    padding:10px;
+}
+.asset-table tbody td{
+    padding:10px;
+    border-bottom:1px solid #024757;
+}
+
+/* Badges */
+.badge{
+    padding:5px 8px;
+    border-radius:6px;
+    font-size:.8rem;
+}
+.badge.pending{
+    background:#e7bb00;
+    color:#0a0900;
+}
+.badge.approved{
+    background:#009b74;
+    color:#eafffb;
+}
+
+/* Modal */
+.modal-bg{
+    display:none;position:fixed;inset:0;
+    background:rgba(0,0,0,0.6);
+    justify-content:center;align-items:center;
+}
+.modal-box{
+    background:#033c50;
+    padding:20px;
+    border-radius:10px;
+    width:300px;
+}
+.modal-btn{
+    width:100%;
+    margin-top:15px;
+    padding:10px;
+    background:#04d9ff;
+    border:none;
+    border-radius:6px;
+    cursor:pointer;
+    color:#002026;
+}
+.modal-btn:hover{
+    background:#53e8ff;
+}
+
+
+</style>
+</head>
+
+<body>
+
+<header>
+<h2 class="logo">AzAsset</h2>
+<nav class="navigation">
+    <a href="user-home.html">Home</a>
+    <button class="btnLogin-popup" onclick="logout()">Log out</button>
+</nav>
+</header>
+
+<div class="dashboard-container">
+<h1 class="dashboard-title">My Department Assets</h1>
+
+<div class="dashboard-panel">
+<input id="searchInput" placeholder="Search name..." class="dashboard-input">
+<button class="dashboard-btn" onclick="scrollToAdd()">Add Asset</button>
+</div>
+
+<!-- ADD ASSET -->
+<div class="dashboard-panel" id="addPanel">
+<h2>Request New Asset</h2>
+
+<form id="addForm">
+    <input id="name" class="dashboard-input" placeholder="Asset Name" required>
+    <input id="description" class="dashboard-input" placeholder="Description">
+
+    <label style="color:#a8ffff;">Purchase Date</label>
+    <input id="purchaseDate" type="date" class="dashboard-input" required>
+
+    <label style="color:#a8ffff;">Expiry Date</label>
+    <input id="expiryDate" type="date" class="dashboard-input" required>
+
+    <button class="dashboard-btn">Submit Request</button>
+</form>
+</div>
+
+<!-- TABLE -->
+<div class="dashboard-panel table-wrap">
+<table class="asset-table">
+<thead>
+<tr>
+<th>Name</th>
+<th>Purchase</th>
+<th>Expiry</th>
+<th>Status</th>
+<th>Added By</th>
+<th>View</th>
+</tr>
+</thead>
+<tbody id="assetBody"></tbody>
+</table>
+</div>
+</div>
+
+
+<!-- VIEW MODAL -->
+<div id="viewModal" class="modal-bg">
+<div class="modal-box">
+<div id="viewContent"></div>
+<button onclick="closeView()" class="modal-btn">Close</button>
+</div>
+</div>
+
+
+<script>
+// DOM references
+const bodyEl=document.getElementById("assetBody");
+const searchEl=document.getElementById("searchInput");
+
+let currentUserDept="";
+let currentUid="";
+
+/* auth + load */
+auth.onAuthStateChanged(async user=>{
+    if(!user) return location.href="login.html";
+    currentUid=user.uid;
+
+    const udoc=await db.collection("users").doc(user.uid).get();
+    currentUserDept=udoc.data().department || "";
+
+    loadAssets();
+});
+
+/* load department assets */
+async function loadAssets(){
+
+    bodyEl.innerHTML="<tr><td colspan='6'>Loading...</td></tr>";
+
+    const search=(searchEl.value||"").toLowerCase();
+
+    const snap=await db.collection("assets")
+        .where("department","==",currentUserDept)
+        .orderBy("createdAt","desc")
+        .get();
+
+    let rows="";
+    snap.forEach(doc=>{
+        const a=doc.data();
+
+        // Fix missing values
+        const statusValue = a.status || "";
+        const isMine = a.userId === currentUid;
+
+        // final visibility rules:
+        const visible =
+            statusValue === "approved" ||
+            (statusValue === "pending" && isMine);
+
+        if(!visible) return;
+
+        if(search && !(a.name||"").toLowerCase().includes(search)) return;
+
+        rows+=`
+        <tr>
+            <td>${a.name}</td>
+            <td>${a.purchaseDate}</td>
+            <td>${a.expiryDate}</td>
+            <td><span class="badge ${statusValue}">${statusValue}</span></td>
+            <td>${a.createdBy||""}</td>
+            <td><button class="dashboard-btn" onclick="view('${doc.id}')">View</button></td>
+        </tr>`;
+    });
+
+    bodyEl.innerHTML=rows||"<tr><td colspan='6'>No assets yet</td></tr>";
+}
+
+searchEl.addEventListener("input",loadAssets);
+
+
+/* submit request */
+document.getElementById("addForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    const u = auth.currentUser;
+
+    // ALWAYS read input like this
+    const nameVal = document.getElementById("name").value.trim();
+    const descVal = document.getElementById("description").value.trim();
+    const purchaseVal = document.getElementById("purchaseDate").value;
+    const expiryVal = document.getElementById("expiryDate").value;
+
+    // validate
+    if (!nameVal) return alert("Please enter asset name");
+    if (!purchaseVal) return alert("Select purchase date");
+    if (!expiryVal) return alert("Select expiry date");
+
+    const diff = Math.ceil((new Date(expiryVal) - new Date()) / (1000 * 60 * 60 * 24));
+
+    const data = {
+        name: nameVal,
+        description: descVal,
+        purchaseDate: purchaseVal,
+        expiryDate: expiryVal,
+        remindBeforeDays: diff > 0 ? diff : 0,
+        department: currentUserDept,
+        createdBy: u.email,
+        userId: u.uid,
+        status: "pending",
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+    };
+
+    await db.collection("assets").add(data);
+    alert("Submitted. Waiting for admin approval");
+    e.target.reset();
+    loadAssets();
+});
+
+
+function view(id){
+    db.collection("assets").doc(id).get().then(doc=>{
+        const a=doc.data();
+        document.getElementById("viewContent").innerHTML=`
+            <b>Name:</b> ${a.name}<br>
+            <b>Description:</b> ${a.description||""}<br>
+            <b>Purchase:</b> ${a.purchaseDate}<br>
+            <b>Expiry:</b> ${a.expiryDate}<br>
+            <b>Status:</b> ${a.status}<br>
+            <b>Added By:</b> ${a.createdBy||""}
+        `;
+        document.getElementById("viewModal").style.display="flex";
+    });
+}
+
+function closeView(){document.getElementById("viewModal").style.display="none";}
+function logout(){auth.signOut().then(()=>location.href="login.html");}
+function scrollToAdd(){document.getElementById("addPanel").scrollIntoView({behavior:"smooth"});}
+</script>
+
+</body>
+</html>

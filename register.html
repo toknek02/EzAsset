@@ -16,6 +16,7 @@
     <nav class="navigation">
       <a href="index.html">Home</a>
       <a href="about.html">About</a>
+      <button onclick="redirectToPage()" class="btnLogin-popup">Login</button>
     </nav>
   </header>
 
@@ -49,7 +50,7 @@
             <select id="role" class="select-box" required>
                 <option value="" disabled selected></option>
                 <option value="admin">Admin</option>
-                <option value="department">Department User</option>
+                <option value="user">Department User</option>
             </select>
             <label>Select Role</label>
         </div>
@@ -109,6 +110,11 @@
             })
             .catch(err => alert(err.message));
     }
+  </script>
+  <script>
+  function redirectToPage(){
+    window.location.href = "login.html";
+  }
   </script>
 
 </body>

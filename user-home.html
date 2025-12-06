@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>User Dashboard - AzAsset</title>
+    <link rel="stylesheet" href="style.css">
+
+    <!-- Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <script src="firebase-config.js"></script>
+
+    <style>
+        body {
+            
+            background-size: cover;
+            background-attachment: fixed;
+            padding-top: 130px;
+        }
+
+        .user-menu {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 35px;
+            width: 85%;
+            max-width: 900px;
+            margin: auto;
+            margin-top: 40px;
+        }
+
+        .menu-card {
+            background: rgba(0, 255, 194, 0.12);
+            border: 2px solid rgba(0, 255, 194, 0.4);
+            border-radius: 20px;
+            padding: 35px;
+            text-align: center;
+            backdrop-filter: blur(20px);
+            box-shadow: 0 0 20px rgba(0, 255, 194, 0.3);
+            cursor: pointer;
+            transition: .3s;
+        }
+
+        .menu-card:hover {
+            transform: scale(1.06);
+            background: rgba(0, 255, 194, 0.2);
+        }
+
+        .menu-title {
+            font-size: 1.5em;
+            color: rgb(183, 255, 238);
+            margin-bottom: 10px;
+            text-shadow: 0 0 5px #00ffd5;
+        }
+
+        .menu-desc {
+            font-size: 0.9em;
+            color: #c6fff0;
+            opacity: 0.85;
+        }
+
+        header{
+            background: rgba(0,0,0,0.25);
+            
+            border-bottom: 1px solid rgba(0,255,221,0.3);
+        }
+
+        .logo{
+            color: #bff;
+            text-shadow: 0 0 6px #00ffe1;
+        }
+
+        .navigation a {
+            color: white;
+            text-shadow: 0 0 6px #00fff2;
+        }
+
+        .dashboard-title{
+            text-shadow: 0 0 10px #00ffe1;
+        }
+    </style>
+</head>
+
+<body>
+
+<header>
+    <h2 class="logo">AzAsset</h2>
+    <nav class="navigation">
+        <h2 onclick="logout()">Logout</h2>
+    </nav>
+</header>
+
+<h1 class="dashboard-title">User Control Panel</h1>
+
+<div class="user-menu">
+
+    <div class="menu-card" onclick="go('user-asset.html')">
+        <div class="menu-title">Department's Asset List</div>
+        <div class="menu-desc">View Your Department Asset List</div>
+    </div>
+
+    <div class="menu-card" onclick="go('user-profile.html')">
+        <div class="menu-title">My Profile</div>
+        <div class="menu-desc">Account & department info</div>
+    </div>
+
+</div>
+
+<script>
+auth.onAuthStateChanged(async user => {
+    if (!user) return location.href = "login.html";
+
+    const u = await db.collection("users").doc(user.uid).get();
+    if (!u.exists){
+        return location.href="login.html";
+    }
+});
+
+function go(page){ location.href = page; }
+function logout(){ auth.signOut().then(()=>location.href="login.html"); }
+</script>
+
+</body>
+</html>

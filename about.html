@@ -1,32 +1,58 @@
 <!DOCTYPE html>
 <html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <meta http-equiv="X-UA-Compatible" content="IE=edge">
-        <meta name="viewport" content="widthdevice-width, initial-scale=1.0">
-        <title>Landing Page</title>
-        <link rel="stylesheet" href="style.css">
-    </head>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>About – AzAsset</title>
+    <link rel="stylesheet" href="style.css">
+</head>
 
-    <body>
-        <header>
-            <h2 class="logo">AzAsset</h2>
-            <nav class="navigation">
-                <a href="index.html">Home</a>
-                <a href="about.html">About</a>
-                <button onclick="redirectToPage()"  class="btnLogin-popup">Login</button>
-            </nav>
-        </header>
+<body>
 
-        <h1>About</h1>
+<header>
+    <h2 class="logo">AzAsset</h2>
+    <nav class="navigation">
+        <a href="index.html">Home</a>
+        <a href="about.html" style="color:lightblue;">About</a>
+        <button onclick="location.href='login.html'" class="btnLogin-popup">Login</button>
+        <button onclick="location.href='register.html'" class="btnLogin-popup">Register</button>
+    </nav>
+</header>
 
-        <script>
-            function redirectToPage(){
-                window.location.href = "login.html";
-            }
-        </script>
-        <script src="script.js"></script>
-        <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script> 
-        <!--ionicons//-->
-        <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script> 
-    </body>
+
+<section class="about-section">
+
+    <h1>About AzAsset</h1>
+
+    <div class="about-box">
+        
+        <p class="about-text">
+            AzAsset is a web-based Asset Management & Expiry Reminder System created to help organizations
+            track important items and receive automatic expiry alerts.
+        </p>
+
+        <p class="about-text">
+            The system centralizes all asset information and helps prevent missed renewals such as software
+            licenses, subscriptions, equipment dates, and warranty expiration.
+        </p>
+
+        <h2 class="about-subtitle">Objective</h2>
+
+        <p class="about-text">
+            • Reduce manual tracking<br>
+            • Improve organization productivity<br>
+            • Prevent forgotten renewals<br>
+            • Quick access to asset status
+        </p>
+
+    </div>
+</section>
+
+
+
+<!-- scripts -->
+<script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
+<script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
+
+</body>
+</html>

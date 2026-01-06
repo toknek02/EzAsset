@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Add Asset - AzAsset</title>
+
+<!-- Tailwind CSS for UI styling -->
+<script src="https://cdn.tailwindcss.com"></script>
+
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+
+<!-- Firebase project configuration -->
+<script src="firebase-config.js"></script>
+</head>
+
+<body class="min-h-screen bg-gradient-to-br from-[#0a0f1f] via-[#1a2337] to-[#0b1528] text-white overflow-x-hidden">
+
+<!-- ================= PAGE CONTENT ================= -->
+<main class="pt-28 px-6 pb-10">
+
+<div class="max-w-xl mx-auto bg-white/5 border border-white/10 rounded-xl p-6">
+  
+  <!-- Page Title -->
+  <h1 class="text-2xl font-bold mb-4">Add New Asset</h1>
+
+  <!-- ================= ADD ASSET FORM ================= -->
+  <form id="addAssetForm" class="grid gap-3">
+
+    <!-- Asset Name -->
+    <input id="name"
+      class="px-4 py-2 rounded bg-white/10 border border-white/10"
+      placeholder="Asset Name" required>
+
+    <!-- Asset Description -->
+    <input id="description"
+      class="px-4 py-2 rounded bg-white/10 border border-white/10"
+      placeholder="Description">
+
+    <!-- Purchase Date -->
+    <input id="purchaseDate" type="date"
+      class="px-4 py-2 rounded bg-white/10 border border-white/10" required>
+
+    <!-- Expiry Date -->
+    <input id="expiryDate" type="date"
+      class="px-4 py-2 rounded bg-white/10 border border-white/10" required>
+
+    <!-- Department Selection -->
+    <select id="department"
+      class="px-4 py-2 rounded bg-white/10 border border-white/10">
+      <option class="text-black">IT</option>
+      <option class="text-black">Finance</option>
+      <option class="text-black">HR</option>
+      <option class="text-black">Logistics</option>
+    </select>
+
+    <!-- Submit Button -->
+    <button class="px-4 py-2 rounded bg-white text-black font-semibold">
+      Save Asset
+    </button>
+  </form>
+
+  <!-- Divider -->
+  <hr class="my-6 border-white/10">
+
+  <!-- ================= CSV IMPORT ================= -->
+
+  <!-- Hidden file input for CSV upload -->
+  <input type="file" id="csvInput" accept=".csv" hidden onchange="importCSV(event)">
+
+  <!-- Button that triggers CSV file selection -->
+  <button onclick="csvInput.click()"
+    class="w-full px-4 py-2 rounded bg-cyan-500 text-black font-semibold">
+    Import CSV
+  </button>
+</div>
+
+</main>
+
+<!-- ================= ADMIN LAYOUT LOADER ================= -->
+<script>
+/*
+  Loads the shared admin layout (sidebar + header)
+  so it stays consistent across all admin pages
+*/
+async function loadAdminLayout(){
+  const res = await fetch("admin-layout.html");
+  const html = await res.text();
+  document.body.insertAdjacentHTML("afterbegin", html);
+}
+
+/* Toggles sidebar visibility (mobile responsiveness) */
+function toggleSidebar(){
+  document.getElementById("sidebar").classList.toggle("-translate-x-full");
+  document.getElementById("overlay").classList.toggle("hidden");
+}
+
+/* Logs out the current admin user */
+function logout(){
+  auth.signOut().then(()=>location.href="login.html");
+}
+
+/* Load layout immediately */
+loadAdminLayout();
+</script>
+
+<!-- ================= PAGE LOGIC ================= -->
+<script>
+/*
+  Authentication guard:
+  - Only logged-in admins can access this page
+*/
+auth.onAuthStateChanged(async user=>{
+  if(!user) return location.href='login.html';
+
+  const doc = await db.collection("users").doc(user.uid).get();
+  if(!doc.exists || doc.data().role !== "admin"){
+    alert("Admins only");
+    return location.href = "login.html";
+  }
+});
+
+/*
+  Handle manual asset creation
+*/
+addAssetForm.onsubmit = async e => {
+  e.preventDefault();
+  const u = auth.currentUser;
+
+  /*
+    Save asset directly as APPROVED
+    because admin is creating it
+  */
+  await db.collection('assets').add({
+    name: name.value.trim(),
+    description: description.value.trim(),
+    purchaseDate: purchaseDate.value,
+    expiryDate: expiryDate.value,
+    department: department.value,
+
+    // Approval & tracking metadata
+    status: "approved",
+    createdBy: u.email,
+    userId: u.uid,
+    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+  });
+
+  alert('✅ Asset added and approved');
+  addAssetForm.reset();
+};
+
+/*
+  Import assets in bulk from CSV file
+  CSV format:
+  name, description, purchaseDate, expiryDate, department
+*/
+async function importCSV(e){
+  const file = e.target.files[0];
+  if(!file) return;
+
+  const text = await file.text();
+
+  // Skip header row
+  const rows = text.trim().split('\n').slice(1);
+
+  for(const r of rows){
+    const [
+      name,
+      description,
+      purchaseDate,
+      expiryDate,
+      department
+    ] = r.split(',').map(x => x.trim());
+
+    // Skip invalid rows
+    if(!name || !expiryDate) continue;
+
+    /*
+      Each imported asset is:
+      - Automatically approved
+      - Linked to admin account
+    */
+    await db.collection('assets').add({
+      name,
+      description,
+      purchaseDate,
+      expiryDate,
+      department: department || 'IT',
+
+      status: "approved",
+      createdBy: auth.currentUser.email,
+      userId: auth.currentUser.uid,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+  }
+
+  alert('✅ CSV imported & approved');
+  csvInput.value='';
+}
+</script>
+
+</body>
+</html>

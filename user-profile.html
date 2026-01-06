@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>User Profile - AzAsset</title>
+
+<!-- Tailwind CSS for styling -->
+<script src="https://cdn.tailwindcss.com"></script>
+
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+
+<!-- Firebase project configuration -->
+<script src="firebase-config.js"></script>
+</head>
+
+<body class="min-h-screen bg-gradient-to-br from-[#0a0f1f] via-[#1a2337] to-[#0b1528] text-white overflow-x-hidden">
+
+<!-- ===================== USER LAYOUT ===================== -->
+<script>
+/**
+ * Loads the shared user layout (sidebar + top bar)
+ * This keeps all user pages visually consistent
+ */
+async function loadUserLayout(){
+  const res = await fetch("user-layout.html");
+  const html = await res.text();
+  document.body.insertAdjacentHTML("afterbegin", html);
+}
+
+/**
+ * Toggles the sidebar visibility (mainly for mobile view)
+ */
+function toggleSidebar(){
+  sidebar.classList.toggle("-translate-x-full");
+  overlay.classList.toggle("hidden");
+}
+
+/**
+ * Logs the user out and redirects to login page
+ */
+function logout(){
+  auth.signOut().then(()=>location.href="login.html");
+}
+
+/* Load the layout immediately */
+loadUserLayout();
+</script>
+
+<!-- ===================== PAGE CONTENT ===================== -->
+<main class="pt-28 px-6 pb-10 flex justify-center">
+
+  <!-- Profile Card -->
+  <div class="w-full max-w-md bg-white/5 border border-white/10 rounded-2xl p-8 shadow-xl">
+
+    <!-- Page Title -->
+    <h1 class="text-3xl font-bold text-center text-cyan-200 mb-6">
+      My Profile
+    </h1>
+
+    <!-- User Information Fields -->
+    <div class="space-y-4">
+
+      <!-- User Name -->
+      <div>
+        <label class="text-sm text-white/60">Name</label>
+        <div id="name"
+          class="mt-1 px-4 py-3 rounded-lg bg-white/10 border border-white/10">
+          —
+        </div>
+      </div>
+
+      <!-- User Email -->
+      <div>
+        <label class="text-sm text-white/60">Email</label>
+        <div id="email"
+          class="mt-1 px-4 py-3 rounded-lg bg-white/10 border border-white/10">
+          —
+        </div>
+      </div>
+
+      <!-- User Department -->
+      <div>
+        <label class="text-sm text-white/60">Department</label>
+        <div id="department"
+          class="mt-1 px-4 py-3 rounded-lg bg-white/10 border border-white/10">
+          —
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+</main>
+
+<!-- ===================== PAGE LOGIC ===================== -->
+<script>
+/**
+ * Authentication state listener
+ * - Ensures user is logged in
+ * - Fetches user profile data from Firestore
+ * - Displays name, email, and department
+ */
+auth.onAuthStateChanged(async user => {
+  if (!user) return location.href = "login.html";
+
+  // Retrieve user document from Firestore
+  const doc = await db.collection("users").doc(user.uid).get();
+  if (!doc.exists) return;
+
+  const data = doc.data();
+
+  // Populate profile fields
+  document.getElementById("name").textContent =
+    data.name || "—";
+
+  document.getElementById("email").textContent =
+    data.email || user.email;
+
+  document.getElementById("department").textContent =
+    data.department || "—";
+});
+</script>
+
+</body>
+</html>

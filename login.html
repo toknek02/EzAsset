@@ -1,103 +1,195 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AzAsset Login</title>
+  <!-- Character encoding -->
+  <meta charset="UTF-8" />
 
-<link rel="stylesheet" href="style.css">
+  <!-- Ensures responsive layout on all devices -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<!-- Firebase -->
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
-<script src="firebase-config.js"></script>
+  <!-- Page title -->
+  <title>AzAsset Login</title>
 
-<!-- Icons -->
-<script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
-<script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
+  <!-- Tailwind CSS for styling -->
+  <script src="https://cdn.tailwindcss.com"></script>
 
+  <!-- Firebase core libraries -->
+  <!-- Used for authentication and Firestore access -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+
+  <!-- Firebase project configuration -->
+  <script src="firebase-config.js"></script>
+
+  <!-- Ionicons for input icons -->
+  <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
+  <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
 </head>
 
-<body>
+<body class="bg-gradient-to-r from-slate-900 to-slate-800 min-h-screen text-white">
 
-    <header>
-        <h2 class="logo">AzAsset</h2>
-        <nav class="navigation">
-            <a href="index.html">Home</a>
-            <a href="about.html">About</a>
-            <button class="btnLogin-popup">Login</button>
-            <button class="btnLogin-popup" onclick="redirectToPage()">Register</button>
-        </nav>
-    </header>
+<!-- ===================== HEADER ===================== -->
+<header class="flex justify-between items-center px-10 py-5">
+  <!-- App name / logo -->
+  <h2 class="text-2xl font-bold">AzAsset</h2>
 
-    <div class="wrapper">
+  <!-- Navigation links -->
+  <nav class="flex gap-6 items-center">
+    <a href="index.html" class="hover:text-blue-400">Home</a>
+    <a href="about.html" class="hover:text-blue-400">About</a>
 
-        <form class="form-box" onsubmit="login(event)">
-            <h2>Login</h2>
+    <!-- Current page indicator -->
+    <button class="bg-blue-600 px-4 py-2 rounded-lg hover:bg-blue-700 transition">
+      Login
+    </button>
 
-            <!-- EMAIL -->
-            <div class="input-box">
-                <input id="email" type="email" required>
-                <label>Email</label>
-                <span class="icon"><ion-icon name="mail-outline"></ion-icon></span>
-            </div>
+    <!-- Redirects user to registration page -->
+    <button onclick="redirectToPage()"
+      class="border border-white px-4 py-2 rounded-lg hover:bg-white hover:text-black transition">
+      Register
+    </button>
+  </nav>
+</header>
 
-            <!-- PASSWORD -->
-            <div class="input-box">
-                <input id="password" type="password" required>
-                <label>Password</label>
-                <span class="icon"><ion-icon name="lock-closed-outline"></ion-icon></span>
-            </div>
+<!-- ===================== LOGIN FORM ===================== -->
+<div class="flex justify-center items-center mt-24 px-4">
 
-            <div class="remember-forgot">
-                <label><input type="checkbox" class="remember"> Remember Me</label>
-                <a href="#">Forgot Password?</a>
-            </div>
+<form onsubmit="login(event)"
+  class="w-full max-w-md p-10 rounded-2xl bg-white/10 backdrop-blur-xl shadow-xl">
 
-            <button type="submit" class="btn">Login</button>
+  <!-- Form title -->
+  <h2 class="text-3xl font-bold text-center mb-8">Login</h2>
 
-            <div class="login-register">
-                Don't have an account?
-                <a href="register.html">Register</a>
-            </div>
-        </form>
-    </div>
+  <!-- EMAIL INPUT -->
+  <div class="mb-6 relative">
+    <!-- User enters email -->
+    <input id="email" type="email" required
+      placeholder="Email address"
+      class="w-full bg-transparent border border-gray-400 rounded-lg px-4 py-3
+             outline-none focus:border-blue-400 placeholder-gray-400">
 
+    <!-- Email icon -->
+    <span class="absolute right-4 top-3 text-gray-400">
+      <ion-icon name="mail-outline"></ion-icon>
+    </span>
+  </div>
 
+  <!-- PASSWORD INPUT -->
+  <div class="mb-6 relative">
+    <!-- User enters password -->
+    <input id="password" type="password" required
+      placeholder="Password"
+      class="w-full bg-transparent border border-gray-400 rounded-lg px-4 py-3
+             outline-none focus:border-blue-400 placeholder-gray-400">
+
+    <!-- Lock icon -->
+    <span class="absolute right-4 top-3 text-gray-400">
+      <ion-icon name="lock-closed-outline"></ion-icon>
+    </span>
+  </div>
+
+  <!-- REMEMBER ME & FORGOT PASSWORD -->
+  <div class="flex justify-between items-center text-sm mb-6">
+    <label class="flex items-center gap-2">
+      <input type="checkbox" class="accent-blue-500">
+      Remember Me
+    </label>
+
+    <!-- Placeholder link (can be implemented later) -->
+    <a href="#" class="hover:text-blue-400">Forgot Password?</a>
+  </div>
+
+  <!-- SUBMIT BUTTON -->
+  <button type="submit"
+    class="w-full bg-blue-600 py-3 rounded-lg font-semibold hover:bg-blue-700 transition">
+    Login
+  </button>
+
+  <!-- REGISTER LINK -->
+  <p class="text-center mt-6 text-sm">
+    Don’t have an account?
+    <a href="register.html" class="text-blue-400 hover:underline">Register</a>
+  </p>
+
+</form>
+</div>
+
+<!-- ===================== PAGE LOGIC ===================== -->
 <script>
-function login(e) {
-    e.preventDefault();
+/**
+ * Handles user login process
+ * - Authenticates user with Firebase Authentication
+ * - Checks Firestore user record
+ * - Enforces admin approval logic
+ * - Redirects based on user role
+ */
+async function login(e) {
+  // Prevent default form submission
+  e.preventDefault();
 
-    const email = document.getElementById("email").value.trim();
-    const password = document.getElementById("password").value.trim();
+  // Get input elements
+  const emailInput = document.getElementById("email");
+  const passwordInput = document.getElementById("password");
 
-    auth.signInWithEmailAndPassword(email, password)
-    .then(async () => {
-        const user = auth.currentUser;
-        const userDoc = await db.collection("users").doc(user.uid).get();
+  // Extract and clean input values
+  const email = emailInput.value.trim();
+  const password = passwordInput.value.trim();
 
-        if (!userDoc.exists) {
-            alert("User record missing.");
-            return auth.signOut();
-        }
+  try {
+    // 🔐 Authenticate user with Firebase Authentication
+    await auth.signInWithEmailAndPassword(email, password);
 
-        const role = userDoc.data().role;
+    // Get currently logged-in user
+    const user = auth.currentUser;
 
-        if (role === "admin") {
-            window.location.href = "admin-home.html";
-        } else {
-            window.location.href = "user-home.html";
-        }
-    })
-    .catch(err => alert(err.message));
-}
-</script>
+    // Fetch user's Firestore document
+    const snap = await db.collection("users").doc(user.uid).get();
 
-<script>
-function redirectToPage(){
-    window.location.href = "register.html";
+    // If Firestore record does not exist → block access
+    if (!snap.exists) {
+      alert("User record not found. Please contact administrator.");
+      await auth.signOut();
+      return;
     }
+
+    // Extract user data
+    const u = snap.data();
+
+    // ❌ If admin explicitly denied access
+    if (u.approved === false) {
+      alert("Your account has been denied access by the administrator.");
+      await auth.signOut();
+      return;
+    }
+
+    // ⏳ If user is not approved yet (pending)
+    if (u.approved !== true) {
+      alert("Your account is pending administrator approval.");
+      await auth.signOut();
+      return;
+    }
+
+    // ✅ User is approved → redirect based on role
+    if (u.role === "admin") {
+      location.href = "admin-home.html";
+    } else {
+      location.href = "user-home.html";
+    }
+
+  } catch (err) {
+    // Show authentication or system errors
+    alert(err.message);
+  }
+}
+
+/**
+ * Redirects user to registration page
+ * Triggered when Register button is clicked
+ */
+function redirectToPage(){
+  location.href = "register.html";
+}
 </script>
 
 </body>

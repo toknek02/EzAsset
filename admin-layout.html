@@ -1,0 +1,57 @@
+<!-- ADMIN SIDEBAR + HEADER (REUSABLE) -->
+
+<!-- Sidebar -->
+<aside id="sidebar"
+  class="fixed top-0 left-0 h-full w-64 bg-black/40 backdrop-blur-xl
+         border-r border-white/10 transform -translate-x-full
+         transition-transform duration-300 z-40">
+
+  <div class="px-6 py-6 text-2xl font-bold text-blue-300">
+    AzAsset
+  </div>
+
+  <nav class="mt-6 space-y-2 px-4 text-sm">
+    <a href="admin-home.html" class="block px-4 py-3 rounded-lg hover:bg-white/10">
+      Dashboard
+    </a>
+    <a href="admin-asset-table.html" class="block px-4 py-3 rounded-lg hover:bg-white/10">
+      Manage Assets
+    </a>
+    <a href="admin-add-asset.html" class="block px-4 py-3 rounded-lg hover:bg-white/10">
+      Add Asset
+    </a>
+    <a href="admin-expiry-dashboard.html" class="block px-4 py-3 rounded-lg hover:bg-white/10">
+      Expiry Dashboard
+    </a>
+    <a href="admin-manage-users.html" class="block px-4 py-3 rounded-lg hover:bg-white/10">
+      Manage Users
+    </a>
+
+    <button onclick="logout()"
+      class="w-full text-left px-4 py-3 rounded-lg text-red-300 hover:bg-red-500/20 mt-6">
+      Logout
+    </button>
+  </nav>
+</aside>
+
+<!-- Overlay -->
+<div id="overlay" onclick="toggleSidebar()"
+  class="fixed inset-0 bg-black/50 hidden z-30"></div>
+
+<!-- Header -->
+<header
+  class="fixed top-0 left-0 right-0 h-20 px-6 flex items-center justify-between
+         backdrop-blur-xl bg-black/30 border-b border-white/10 z-30">
+
+  <button onclick="toggleSidebar()">
+    <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2"
+      viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round"
+        d="M4 6h16M4 12h16M4 18h16"/>
+    </svg>
+  </button>
+
+  <h1 class="text-xl font-semibold">Admin Panel</h1>
+
+  <span class="text-sm opacity-80">Admin</span>
+</header>

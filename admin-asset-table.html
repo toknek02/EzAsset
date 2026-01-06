@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Assets — Admin Approval</title>
+
+<!-- Tailwind CSS for styling -->
+<script src="https://cdn.tailwindcss.com"></script>
+
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+
+<!-- Firebase project configuration -->
+<script src="firebase-config.js"></script>
+
+<style>
+/* Force fixed table layout so headers align with cells */
+table{table-layout:fixed;width:100%}
+th,td{vertical-align:middle;white-space:nowrap}
+
+/* Column width control */
+.col-name{width:22%}
+.col-dept{width:12%}
+.col-expiry{width:12%}
+.col-status{width:14%}
+.col-approval{width:18%}
+.col-actions{width:14%;text-align:center}
+
+/* Status badges */
+.badge{padding:4px 12px;border-radius:999px;font-size:.75rem;font-weight:600;text-align:center}
+.badge.expired{background:rgba(239,68,68,.3);color:#fecaca}
+.badge.soon-red{background:rgba(239,68,68,.2);color:#fca5a5}
+.badge.soon-yellow{background:rgba(251,191,36,.2);color:#fde68a}
+.badge.safe{background:rgba(34,197,94,.2);color:#86efac}
+
+/* Action buttons */
+.icon-btn{padding:6px 12px;border-radius:6px;font-size:.8rem}
+.icon-edit{background:rgba(59,130,246,.25);color:#93c5fd}
+.icon-delete{background:rgba(239,68,68,.25);color:#fca5a5}
+.icon-btn:hover{opacity:.85}
+
+/* Empty table message */
+.muted{color:rgba(255,255,255,.5);padding:20px;text-align:center}
+</style>
+</head>
+
+<body class="min-h-screen bg-gradient-to-br from-[#0a0f1f] via-[#1a2337] to-[#0b1528] text-white overflow-x-hidden">
+
+<!-- ================= ADMIN LAYOUT LOADER ================= -->
+<script>
+/* Load shared admin sidebar & header */
+async function loadAdminLayout(){
+  const res = await fetch("admin-layout.html");
+  const html = await res.text();
+  document.body.insertAdjacentHTML("afterbegin", html);
+}
+
+/* Toggle sidebar visibility (mobile view) */
+function toggleSidebar(){
+  sidebar.classList.toggle("-translate-x-full");
+  overlay.classList.toggle("hidden");
+}
+
+/* Log out current user */
+function logout(){
+  auth.signOut().then(()=>location.href="login.html");
+}
+
+/* Load layout immediately */
+loadAdminLayout();
+</script>
+
+<!-- ================= PAGE CONTENT ================= -->
+<main class="pt-28 px-6 pb-10">
+
+<h1 class="text-center text-4xl font-bold text-blue-200 mb-6">
+Assets — Admin Approval
+</h1>
+
+<!-- Search & Filter Controls -->
+<div class="flex flex-wrap gap-3 mb-6">
+  <input id="searchInput"
+    class="px-4 py-2 rounded-lg bg-white/10 border border-white/10 w-72"
+    placeholder="Search asset..." />
+
+  <select id="expiryFilter"
+    class="px-4 py-2 rounded-lg bg-white/10 border border-white/10">
+    <option value="all">All Status</option>
+    <option value="soon">Expiring Soon</option>
+    <option value="expired">Expired</option>
+  </select>
+
+  <select id="departmentFilter"
+    class="px-4 py-2 rounded-lg bg-white/10 border border-white/10">
+    <option value="all">All Departments</option>
+    <option>IT</option>
+    <option>Finance</option>
+    <option>HR</option>
+    <option>Logistics</option>
+  </select>
+</div>
+
+<!-- Assets Table -->
+<div class="bg-white/5 border border-white/10 rounded-xl overflow-x-auto">
+<table class="min-w-[1200px] w-full text-sm">
+<thead class="bg-white/10">
+<tr>
+  <th class="p-3 col-name text-left">Name</th>
+  <th class="p-3 col-dept text-center">Department</th>
+  <th class="p-3 col-expiry text-center">Expiry</th>
+  <th class="p-3 col-status text-center">Status</th>
+  <th class="p-3 col-approval text-center">Approval</th>
+  <th class="p-3 col-actions text-center">Actions</th>
+</tr>
+</thead>
+<tbody id="assetTableBody"></tbody>
+</table>
+</div>
+
+</main>
+
+<!-- ================= PAGE LOGIC ================= -->
+<script>
+/* Store all assets locally for filtering */
+let assets=[];
+
+/* Authentication check: admin only */
+auth.onAuthStateChanged(async user=>{
+  if(!user) return location.href="login.html";
+
+  const u=await db.collection("users").doc(user.uid).get();
+  if(!u.exists || u.data().role!=="admin")
+    return location.href="login.html";
+
+  loadAssets();
+});
+
+/* Fetch all assets from Firestore */
+async function loadAssets(){
+  assetTableBody.innerHTML =
+    '<tr><td colspan="6" class="muted">Loading…</td></tr>';
+
+  const snap = await db.collection("assets")
+    .orderBy("createdAt","desc")
+    .get();
+
+  assets = snap.docs.map(d=>({id:d.id,data:d.data()}));
+  renderTable();
+}
+
+/* Render assets into table with filters applied */
+function renderTable(){
+  const s = searchInput.value.toLowerCase();
+  const f = expiryFilter.value;
+  const dept = departmentFilter.value;
+  const today = new Date();
+  let rows = "";
+
+  assets.forEach(({id,data:a})=>{
+    if(dept!=="all" && a.department!==dept) return;
+    if(s && !((a.name||"")+(a.description||"")).toLowerCase().includes(s)) return;
+
+    /* Calculate days remaining until expiry */
+    const diff = Math.ceil(
+      (new Date(a.expiryDate) - today) / 86400000
+    );
+
+    /* Determine expiry status */
+    let statusText="Safe", badgeClass="safe";
+    if(diff<=0){statusText="Expired";badgeClass="expired";}
+    else if(diff<=30){statusText="Expiring Soon";badgeClass="soon-red";}
+    else if(diff<=90){statusText="Expiring Soon";badgeClass="soon-yellow";}
+
+    /* Apply expiry filter */
+    if(f==="expired" && diff>0) return;
+    if(f==="soon" && diff>90) return;
+
+    rows += `
+    <tr class="border-b border-white/5 hover:bg-white/5">
+      <td class="p-3 col-name font-semibold text-left">${a.name}</td>
+      <td class="p-3 col-dept text-center">${a.department}</td>
+      <td class="p-3 col-expiry text-center">${a.expiryDate}</td>
+
+      <!-- Centered status badge -->
+      <td class="p-3 col-status">
+        <div class="flex justify-center">
+          <span class="badge ${badgeClass}">
+            ${statusText}
+          </span>
+        </div>
+      </td>
+
+      <!-- Approval dropdown -->
+      <td class="p-3 col-approval text-center">
+        <select
+          class="bg-white/10 border border-white/10 rounded px-3 py-1 mx-auto block"
+          onchange="updateApproval('${id}', this.value)">
+          <option class="text-black" value="pending" ${a.status==="pending"?"selected":""}>Pending</option>
+          <option class="text-black" value="approved" ${a.status==="approved"?"selected":""}>Approved</option>
+          <option class="text-black" value="denied" ${a.status==="denied"?"selected":""}>Denied</option>
+        </select>
+      </td>
+
+      <!-- Edit & Delete actions -->
+      <td class="p-3 col-actions space-x-2">
+        <button
+          onclick="location.href='admin-edit-asset.html?id=${id}'"
+          class="icon-btn bg-blue-500/20 text-blue-300">
+          Edit
+        </button>
+
+        <button class="icon-btn icon-delete"
+          onclick="deleteAsset('${id}')">
+          Delete
+        </button>
+      </td>
+    </tr>`;
+  });
+
+  assetTableBody.innerHTML = rows ||
+    '<tr><td colspan="6" class="muted">No assets found</td></tr>';
+}
+
+/* Update asset approval status */
+async function updateApproval(id,status){
+  await db.collection("assets").doc(id).update({status});
+  loadAssets();
+}
+
+/* Delete asset permanently */
+async function deleteAsset(id){
+  if(!confirm("Delete this asset?")) return;
+  await db.collection("assets").doc(id).delete();
+  loadAssets();
+}
+
+/* Live filtering */
+searchInput.oninput = renderTable;
+expiryFilter.onchange = renderTable;
+departmentFilter.onchange = renderTable;
+</script>
+
+</body>
+</html>

@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Manage Users - AzAsset</title>
+
+<!-- Tailwind CSS for styling -->
+<script src="https://cdn.tailwindcss.com"></script>
+
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+
+<!-- Firebase configuration -->
+<script src="firebase-config.js"></script>
+</head>
+
+<body class="min-h-screen bg-gradient-to-br from-[#0a0f1f] via-[#1a2337] to-[#0b1528] text-white overflow-x-hidden">
+
+<!-- ===================== PAGE CONTENT ===================== -->
+<main class="pt-28 px-6 pb-10">
+<div class="w-[92%] max-w-7xl mx-auto">
+
+<h1 class="text-center text-4xl font-bold text-blue-300 mb-8">
+Manage Users
+</h1>
+
+<!-- ===================== FILTER CONTROLS ===================== -->
+<!-- Allows admin to search users and filter by department -->
+<div class="flex flex-wrap gap-4 mb-6">
+
+  <!-- Search by email -->
+  <input id="searchInput"
+    class="px-4 py-2 rounded-lg bg-white/10 border border-white/10 w-full sm:w-72"
+    placeholder="Search email..." />
+
+  <!-- Department filter -->
+  <select id="departmentFilter"
+    class="px-4 py-2 rounded-lg bg-white/10 border border-white/10">
+    <option value="all">All Departments</option>
+    <option class="text-black">IT</option>
+    <option class="text-black">Finance</option>
+    <option class="text-black">HR</option>
+    <option class="text-black">Logistics</option>
+  </select>
+</div>
+
+<!-- ===================== USER TABLE ===================== -->
+<div class="bg-white/5 border border-white/10 rounded-xl overflow-x-auto">
+<table class="min-w-[1100px] w-full text-sm">
+
+<thead class="bg-white/10">
+<tr>
+  <th class="p-3 text-left">Email</th>
+  <th class="p-3 text-left">Approval</th>
+  <th class="p-3 text-left">Department</th>
+  <th class="p-3 text-left">Action</th>
+</tr>
+</thead>
+
+<!-- Table body populated dynamically -->
+<tbody id="userTableBody"></tbody>
+</table>
+</div>
+
+</div>
+</main>
+
+<!-- ===================== SHARED ADMIN LAYOUT ===================== -->
+<script>
+/**
+ * Loads shared admin layout (sidebar + header)
+ */
+async function loadAdminLayout(){
+  const res = await fetch("admin-layout.html");
+  const html = await res.text();
+  document.body.insertAdjacentHTML("afterbegin", html);
+}
+
+/**
+ * Toggles sidebar visibility (for mobile view)
+ */
+function toggleSidebar(){
+  sidebar.classList.toggle("-translate-x-full");
+  overlay.classList.toggle("hidden");
+}
+
+/**
+ * Logs admin out and redirects to login page
+ */
+function logout(){
+  auth.signOut().then(()=>location.href="login.html");
+}
+
+/* Load admin layout immediately */
+loadAdminLayout();
+</script>
+
+<!-- ===================== PAGE LOGIC ===================== -->
+<script>
+/* DOM references */
+const userTableBody = document.getElementById("userTableBody");
+const searchInput = document.getElementById("searchInput");
+const departmentFilter = document.getElementById("departmentFilter");
+
+/* Store all users locally for filtering */
+let allUsers = [];
+
+/**
+ * Authentication & authorization check
+ * Ensures only admins can access this page
+ */
+auth.onAuthStateChanged(async user => {
+  if (!user) return location.href = "login.html";
+
+  const doc = await db.collection("users").doc(user.uid).get();
+  if (!doc.exists || doc.data().role !== "admin") {
+    alert("Admin access only");
+    return location.href = "login.html";
+  }
+
+  loadUsers();
+});
+
+/**
+ * Fetches all users from Firestore
+ */
+async function loadUsers(){
+  const snap = await db.collection("users").get();
+  allUsers = snap.docs.map(d => ({ id:d.id, data:d.data() }));
+  renderUsers();
+}
+
+/**
+ * Renders user rows based on:
+ * - Email search
+ * - Department filter
+ */
+function renderUsers(){
+  const s = searchInput.value.toLowerCase();
+  const d = departmentFilter.value;
+  let rows = "";
+
+  allUsers.forEach(({id,data:u})=>{
+    if(s && !(u.email||"").toLowerCase().includes(s)) return;
+    if(d !== "all" && u.department !== d) return;
+
+    /* Determine approval status */
+    const approval =
+      u.approved === true  ? "approved" :
+      u.approved === false ? "denied"   :
+                             "pending";
+
+    rows += `
+      <tr class="border-b border-white/5 hover:bg-white/5">
+
+        <!-- Email -->
+        <td class="p-3">${u.email}</td>
+
+        <!-- Approval dropdown -->
+        <td class="p-3">
+          <select onchange="updateApproval('${id}', this.value)"
+            class="bg-white/10 border border-white/10 rounded px-2 py-1 text-sm">
+            <option class="text-black" value="pending" ${approval==="pending"?"selected":""}>Pending</option>
+            <option class="text-black" value="approved" ${approval==="approved"?"selected":""}>Approved</option>
+            <option class="text-black" value="denied" ${approval==="denied"?"selected":""}>Denied</option>
+          </select>
+        </td>
+
+        <!-- Department selector -->
+        <td class="p-3">
+          <select onchange="updateDepartment('${id}', this.value)"
+            class="bg-white/10 border border-white/10 rounded px-2 py-1 text-sm">
+            ${["IT","Finance","HR","Logistics"].map(dep =>
+              `<option class="text-black" ${u.department===dep?"selected":""}>${dep}</option>`
+            ).join("")}
+          </select>
+        </td>
+
+        <!-- Delete user -->
+        <td class="p-3">
+          <button onclick="deleteUser('${id}')"
+            class="px-3 py-1 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-300 text-sm">
+            Delete
+          </button>
+        </td>
+
+      </tr>`;
+  });
+
+  /* Display rows or empty message */
+  userTableBody.innerHTML = rows ||
+    `<tr>
+      <td colspan="4" class="p-4 text-center text-white/60">
+        No users found
+      </td>
+    </tr>`;
+}
+
+/**
+ * Updates user's approval status in Firestore
+ */
+async function updateApproval(id, value){
+  if(value === "denied"){
+    await db.collection("users").doc(id).update({ approved: false });
+  } else if(value === "approved"){
+    await db.collection("users").doc(id).update({ approved: true });
+  } else {
+    await db.collection("users").doc(id).update({ approved: null });
+  }
+}
+
+/**
+ * Updates user's department
+ */
+async function updateDepartment(id, department){
+  await db.collection("users").doc(id).update({ department });
+}
+
+/**
+ * Permanently deletes a user document
+ */
+async function deleteUser(id){
+  if(!confirm("Delete this user permanently?")) return;
+  await db.collection("users").doc(id).delete();
+  loadUsers();
+}
+
+/* Re-render table when filters change */
+searchInput.oninput = renderUsers;
+departmentFilter.onchange = renderUsers;
+</script>
+
+</body>
+</html>

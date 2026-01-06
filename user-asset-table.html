@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>My Department Assets - AzAsset</title>
+
+<!-- Tailwind CSS for styling -->
+<script src="https://cdn.tailwindcss.com"></script>
+
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+
+<!-- Firebase project configuration -->
+<script src="firebase-config.js"></script>
+</head>
+
+<body class="min-h-screen bg-gradient-to-br from-[#0a0f1f] via-[#1a2337] to-[#0b1528] text-white overflow-x-hidden">
+
+<!-- ===================== USER LAYOUT ===================== -->
+<script>
+/**
+ * Loads the shared user sidebar and top navigation
+ * Ensures consistent UI across all user pages
+ */
+async function loadUserLayout(){
+  const res = await fetch("user-layout.html");
+  const html = await res.text();
+  document.body.insertAdjacentHTML("afterbegin", html);
+}
+
+/**
+ * Toggles sidebar visibility (used on mobile)
+ */
+function toggleSidebar(){
+  sidebar.classList.toggle("-translate-x-full");
+  overlay.classList.toggle("hidden");
+}
+
+/**
+ * Logs out the user and redirects to login page
+ */
+function logout(){
+  auth.signOut().then(()=>location.href="login.html");
+}
+
+/* Load layout immediately */
+loadUserLayout();
+</script>
+
+<!-- ===================== PAGE CONTENT ===================== -->
+<main class="pt-28 px-6 pb-10 max-w-7xl mx-auto">
+
+<!-- Page Title -->
+<h1 class="text-center text-4xl font-bold text-cyan-200 mb-6">
+My Department Assets
+</h1>
+
+<!-- ===================== FILTER CONTROLS ===================== -->
+<div class="flex flex-wrap gap-3 mb-6">
+
+  <!-- Search by name or description -->
+  <input id="searchInput"
+    class="px-4 py-2 rounded-lg bg-white/10 border border-white/10 w-full sm:w-72"
+    placeholder="Search name or description..." />
+
+  <!-- Status filter dropdown -->
+  <select id="statusFilter"
+    class="px-4 py-2 rounded-lg bg-white/10 border border-white/10">
+    <option class="text-black" value="all">All Status</option>
+    <option class="text-black" value="safe">Safe</option>
+    <option class="text-black" value="soon">Expiring Soon</option>
+    <option class="text-black" value="expired">Expired</option>
+  </select>
+
+</div>
+
+<!-- ===================== ASSET TABLE ===================== -->
+<div class="bg-white/5 border border-white/10 rounded-xl overflow-x-auto">
+<table class="min-w-[1100px] w-full text-sm">
+
+<thead class="bg-white/10">
+<tr>
+  <th class="p-3 text-left">Name</th>
+  <th class="p-3 text-left">Description</th>
+  <th class="p-3 text-left">Purchase Date</th>
+  <th class="p-3 text-left">Expiry Date</th>
+  <th class="p-3 text-left">Days Left</th>
+  <th class="p-3 text-left">Status</th>
+</tr>
+</thead>
+
+<tbody id="assetTableBody"></tbody>
+</table>
+</div>
+
+</main>
+
+<!-- ===================== PAGE LOGIC ===================== -->
+<script>
+/**
+ * DOM references
+ */
+const searchInputEl = document.getElementById('searchInput');
+const statusFilterEl = document.getElementById('statusFilter');
+const assetTableBody = document.getElementById('assetTableBody');
+
+/**
+ * Stores user's department
+ * Used to load only department-related assets
+ */
+let currentUserDept = '';
+
+/**
+ * Stores all loaded assets for filtering & rendering
+ */
+let allAssets = [];
+
+/**
+ * Authentication & approval check
+ * - User must be logged in
+ * - User must be approved by admin
+ * - Fetch user's department
+ */
+auth.onAuthStateChanged(async user => {
+  if (!user) return location.href = 'login.html';
+
+  const udoc = await db.collection('users').doc(user.uid).get();
+
+  if (!udoc.exists || udoc.data().approved !== true) {
+    alert("Your account is not approved.");
+    await auth.signOut();
+    return location.href = 'login.html';
+  }
+
+  currentUserDept = udoc.data().department || '';
+  loadAssets();
+});
+
+/**
+ * Loads approved assets belonging to the user's department
+ */
+async function loadAssets(){
+  assetTableBody.innerHTML =
+    `<tr><td colspan="6" class="p-4 text-center text-white/60">Loading…</td></tr>`;
+
+  try {
+    const snap = await db.collection('assets')
+      .where('department', '==', currentUserDept)
+      .where('status', '==', 'approved')
+      .get();
+
+    allAssets = snap.docs.map(d => d.data());
+    renderTable();
+
+  } catch (err) {
+    console.error(err);
+    assetTableBody.innerHTML =
+      `<tr><td colspan="6" class="p-4 text-center text-red-400">
+        Failed to load assets
+      </td></tr>`;
+  }
+}
+
+/**
+ * Renders asset table based on:
+ * - Search input
+ * - Status filter
+ * - Expiry date calculations
+ */
+function renderTable(){
+  const s = (searchInputEl.value || '').toLowerCase();
+  const filter = statusFilterEl.value;
+  const today = new Date();
+  let rows = '';
+
+  allAssets.forEach(a => {
+
+    /* Search filter */
+    const text = ((a.name||'') + ' ' + (a.description||'')).toLowerCase();
+    if (s && !text.includes(s)) return;
+
+    /* Calculate days until expiry */
+    const expiry = new Date(a.expiryDate);
+    const diffDays = Math.ceil((expiry - today) / 86400000);
+
+    /* Status styling logic */
+    let statusText = 'Safe';
+    let badgeClass = 'bg-green-500/20 text-green-300';
+    let statusClass = 'text-green-400';
+
+    if (diffDays <= 0) {
+      statusText = 'Expired';
+      badgeClass = 'bg-red-500/30 text-red-300';
+      statusClass = 'text-red-400 font-bold';
+    }
+    else if (diffDays <= 30) {
+      statusText = 'Expiring Soon';
+      badgeClass = 'bg-red-500/20 text-red-300';
+      statusClass = 'text-red-300 font-semibold';
+    }
+    else if (diffDays <= 90) {
+      statusText = 'Expiring Soon';
+      badgeClass = 'bg-yellow-500/20 text-yellow-300';
+      statusClass = 'text-yellow-300';
+    }
+
+    /* Status filter logic */
+    if (filter === 'expired' && diffDays > 0) return;
+    if (filter === 'soon' && diffDays > 90) return;
+    if (filter === 'safe' && diffDays <= 90) return;
+
+    /* Render row */
+    rows += `
+      <tr class="border-b border-white/5 hover:bg-white/5">
+        <td class="p-3 font-semibold">${escapeHtml(a.name)}</td>
+        <td class="p-3 text-white/70">${escapeHtml(a.description || '—')}</td>
+        <td class="p-3">${a.purchaseDate || ''}</td>
+        <td class="p-3">${a.expiryDate || ''}</td>
+        <td class="p-3 ${statusClass}">
+          ${diffDays <= 0 ? 'Expired' : diffDays + ' days'}
+        </td>
+        <td class="p-3">
+          <span class="px-3 py-1 rounded-full text-xs font-semibold ${badgeClass}">
+            ${statusText}
+          </span>
+        </td>
+      </tr>`;
+  });
+
+  assetTableBody.innerHTML = rows ||
+    `<tr><td colspan="6" class="p-4 text-center text-white/60">
+      No assets found
+    </td></tr>`;
+}
+
+/**
+ * Escapes HTML to prevent XSS attacks
+ */
+function escapeHtml(s){
+  return String(s||'').replace(/[&<>"']/g,m=>({
+    "&":"&amp;","<":"&lt;",">":"&gt;",
+    "\"":"&quot;","'":"&#39;"
+  }[m]));
+}
+
+/* Re-render table when filters change */
+searchInputEl.oninput = renderTable;
+statusFilterEl.onchange = renderTable;
+</script>
+
+</body>
+</html>

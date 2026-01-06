@@ -1,123 +1,205 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>User Dashboard - AzAsset</title>
-    <link rel="stylesheet" href="style.css">
+<meta charset="UTF-8">
+<title>User Dashboard - AzAsset</title>
 
-    <!-- Firebase -->
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
-    <script src="firebase-config.js"></script>
+<!-- Makes layout responsive on all devices -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <style>
-        body {
-            
-            background-size: cover;
-            background-attachment: fixed;
-            padding-top: 130px;
-        }
+<!-- Tailwind CSS for styling -->
+<script src="https://cdn.tailwindcss.com"></script>
 
-        .user-menu {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 35px;
-            width: 85%;
-            max-width: 900px;
-            margin: auto;
-            margin-top: 40px;
-        }
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 
-        .menu-card {
-            background: rgba(0, 255, 194, 0.12);
-            border: 2px solid rgba(0, 255, 194, 0.4);
-            border-radius: 20px;
-            padding: 35px;
-            text-align: center;
-            backdrop-filter: blur(20px);
-            box-shadow: 0 0 20px rgba(0, 255, 194, 0.3);
-            cursor: pointer;
-            transition: .3s;
-        }
-
-        .menu-card:hover {
-            transform: scale(1.06);
-            background: rgba(0, 255, 194, 0.2);
-        }
-
-        .menu-title {
-            font-size: 1.5em;
-            color: rgb(183, 255, 238);
-            margin-bottom: 10px;
-            text-shadow: 0 0 5px #00ffd5;
-        }
-
-        .menu-desc {
-            font-size: 0.9em;
-            color: #c6fff0;
-            opacity: 0.85;
-        }
-
-        header{
-            background: rgba(0,0,0,0.25);
-            
-            border-bottom: 1px solid rgba(0,255,221,0.3);
-        }
-
-        .logo{
-            color: #bff;
-            text-shadow: 0 0 6px #00ffe1;
-        }
-
-        .navigation a {
-            color: white;
-            text-shadow: 0 0 6px #00fff2;
-        }
-
-        .dashboard-title{
-            text-shadow: 0 0 10px #00ffe1;
-        }
-    </style>
+<!-- Firebase project configuration -->
+<script src="firebase-config.js"></script>
 </head>
 
-<body>
+<body class="min-h-screen bg-gradient-to-br from-[#0a0f1f] via-[#1a2337] to-[#0b1528] text-white overflow-x-hidden">
 
-<header>
-    <h2 class="logo">AzAsset</h2>
-    <nav class="navigation">
-        <h2 onclick="logout()">Logout</h2>
-    </nav>
-</header>
-
-<h1 class="dashboard-title">User Control Panel</h1>
-
-<div class="user-menu">
-
-    <div class="menu-card" onclick="go('user-asset.html')">
-        <div class="menu-title">Department's Asset List</div>
-        <div class="menu-desc">View Your Department Asset List</div>
-    </div>
-
-    <div class="menu-card" onclick="go('user-profile.html')">
-        <div class="menu-title">My Profile</div>
-        <div class="menu-desc">Account & department info</div>
-    </div>
-
-</div>
-
+<!-- ===================== USER LAYOUT ===================== -->
 <script>
-auth.onAuthStateChanged(async user => {
-    if (!user) return location.href = "login.html";
+/**
+ * Loads the shared user sidebar + top navigation layout
+ * This keeps all user pages consistent
+ */
+async function loadUserLayout(){
+  const res = await fetch("user-layout.html");
+  const html = await res.text();
+  document.body.insertAdjacentHTML("afterbegin", html);
+}
 
-    const u = await db.collection("users").doc(user.uid).get();
-    if (!u.exists){
-        return location.href="login.html";
-    }
+/**
+ * Toggles the sidebar open/close state
+ */
+function toggleSidebar(){
+  sidebar.classList.toggle("-translate-x-full");
+  overlay.classList.toggle("hidden");
+}
+
+/**
+ * Logs out the user and redirects to login page
+ */
+function logout(){
+  auth.signOut().then(()=>location.href="login.html");
+}
+
+/* Load user layout immediately */
+loadUserLayout();
+
+/**
+ * Authentication & approval check
+ * - Ensures user is logged in
+ * - Ensures account is approved by admin
+ * - Loads expiry notifications for user's department
+ */
+auth.onAuthStateChanged(async user => {
+  if (!user) return location.href = "login.html";
+
+  const u = await db.collection("users").doc(user.uid).get();
+
+  // If user is not approved, deny access
+  if (!u.exists || u.data().approved !== true) {
+    await auth.signOut();
+    return location.href = "login.html";
+  }
+
+  // Load department-based expiry notifications
+  loadUserExpiryNotifications(u.data().department);
+});
+</script>
+
+<!-- ===================== PAGE CONTENT ===================== -->
+<main class="pt-28 px-6 pb-10 max-w-7xl mx-auto">
+
+  <!-- Page title -->
+  <h1 class="text-4xl font-bold text-cyan-200 mb-10">
+    User Dashboard
+  </h1>
+
+  <!-- ===================== DASHBOARD CARDS ===================== -->
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+
+    <!-- My Assets -->
+    <div onclick="go('user-asset-table.html')"
+      class="cursor-pointer bg-white/5 border border-white/10 rounded-2xl p-8
+             hover:bg-white/10 hover:shadow-xl transition">
+      <h3 class="text-lg font-semibold mb-2 text-cyan-300">
+        My Department Assets
+      </h3>
+      <p class="text-sm text-white/60">
+        View assets assigned to your department
+      </p>
+    </div>
+
+    <!-- Request Asset -->
+    <div onclick="go('user-asset.html')"
+      class="cursor-pointer bg-white/5 border border-white/10 rounded-2xl p-8
+             hover:bg-white/10 hover:shadow-xl transition">
+      <h3 class="text-lg font-semibold mb-2 text-cyan-300">
+        Request Asset
+      </h3>
+      <p class="text-sm text-white/60">
+        Submit a new asset request for approval
+      </p>
+    </div>
+
+    <!-- Profile -->
+    <div onclick="go('user-profile.html')"
+      class="cursor-pointer bg-white/5 border border-white/10 rounded-2xl p-8
+             hover:bg-white/10 hover:shadow-xl transition">
+      <h3 class="text-lg font-semibold mb-2 text-cyan-300">
+        My Profile
+      </h3>
+      <p class="text-sm text-white/60">
+        View your account and department details
+      </p>
+    </div>
+
+    <!-- ===================== EXPIRY NOTIFICATIONS ===================== -->
+    <div class="mt-12">
+      <h2 class="text-xl font-semibold mb-4 text-red-300">
+        ⚠ Assets Expiring Soon (≤ 30 days)
+      </h2>
+
+      <!-- Expiring assets list -->
+      <div id="expireList"
+        class="bg-white/5 border border-white/10 rounded-xl p-4 space-y-3 text-sm">
+        <p class="text-white/50">Loading…</p>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<!-- ===================== PAGE LOGIC ===================== -->
+<script>
+/**
+ * Ensures only users (not admins) can access this page
+ */
+auth.onAuthStateChanged(async user => {
+  if (!user) return location.href = "login.html";
+
+  const u = await db.collection("users").doc(user.uid).get();
+  if (!u.exists || u.data().role !== "user") {
+    return location.href = "login.html";
+  }
 });
 
-function go(page){ location.href = page; }
-function logout(){ auth.signOut().then(()=>location.href="login.html"); }
+/**
+ * Simple navigation helper
+ */
+function go(page){
+  location.href = page;
+}
+
+/**
+ * Loads assets that are:
+ * - Approved
+ * - Belong to the user's department
+ * - Expiring within 30 days
+ */
+async function loadUserExpiryNotifications(userDept){
+  const today = new Date();
+
+  const snap = await db.collection("assets")
+    .where("department", "==", userDept)
+    .where("status", "==", "approved")
+    .get();
+
+  let html = "";
+  let count = 0;
+
+  snap.forEach(doc => {
+    const a = doc.data();
+
+    // Calculate days remaining until expiry
+    const diff = Math.ceil(
+      (new Date(a.expiryDate) - today) / 86400000
+    );
+
+    // Only show assets expiring within 30 days
+    if (diff > 0 && diff <= 30) {
+      count++;
+      html += `
+        <div class="flex justify-between border-b border-white/10 pb-2">
+          <span>${a.name}</span>
+          <span class="text-red-400 font-semibold">${diff} days</span>
+        </div>
+      `;
+    }
+  });
+
+  // Update UI
+  document.getElementById("expireList").innerHTML =
+    count
+      ? html
+      : `<p class="text-white/50">No assets expiring soon 🎉</p>`;
+}
 </script>
 
 </body>

@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Expiry Dashboard - AzAsset</title>
+
+<!-- Tailwind CSS for layout & styling -->
+<script src="https://cdn.tailwindcss.com"></script>
+
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+
+<!-- Firebase configuration -->
+<script src="firebase-config.js"></script>
+</head>
+
+<body class="min-h-screen bg-gradient-to-br from-[#0a0f1f] via-[#1a2337] to-[#0b1528] text-white overflow-x-hidden">
+
+<!-- ===================== PAGE CONTENT ===================== -->
+<main class="pt-28 px-6 pb-10">
+<div class="w-[92%] max-w-7xl mx-auto">
+
+<!-- PAGE TITLE -->
+<h1 class="text-center text-4xl font-bold text-red-300 drop-shadow-lg mb-6">
+Assets Expiring Within 3 Months
+</h1>
+
+<!-- ===================== SUMMARY CARDS ===================== -->
+<!-- Shows quick statistics for asset expiry conditions -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+
+  <!-- Expired assets -->
+  <div class="bg-red-900/30 border border-red-500/30 rounded-xl p-6">
+    <h3 class="text-red-300 text-sm mb-2">Expired</h3>
+    <p id="expiredCount" class="text-3xl font-bold text-red-400">0</p>
+  </div>
+
+  <!-- Assets expiring in 30 days or less -->
+  <div class="bg-yellow-900/30 border border-yellow-500/30 rounded-xl p-6">
+    <h3 class="text-yellow-300 text-sm mb-2">≤ 30 Days</h3>
+    <p id="soonCount" class="text-3xl font-bold text-yellow-400">0</p>
+  </div>
+
+  <!-- Assets expiring in 31–90 days -->
+  <div class="bg-orange-900/30 border border-orange-500/30 rounded-xl p-6">
+    <h3 class="text-orange-300 text-sm mb-2">31 – 90 Days</h3>
+    <p id="threeMonthCount" class="text-3xl font-bold text-orange-400">0</p>
+  </div>
+</div>
+
+<!-- ===================== FILTER CONTROLS ===================== -->
+<div class="flex flex-wrap gap-3 items-center mb-6">
+
+  <!-- Search by asset name or description -->
+  <input id="searchInput"
+    class="px-4 py-2 rounded-lg bg-white/10 border border-white/10 w-full sm:w-72"
+    placeholder="Search name or description..." />
+
+  <!-- Filter by expiry status -->
+  <select id="statusFilter"
+    class="px-4 py-2 rounded-lg bg-white/10 border border-white/10">
+    <option value="all">All</option>
+    <option value="expired">Expired</option>
+    <option value="critical">≤ 30 Days</option>
+    <option value="warning">31 – 90 Days</option>
+  </select>
+
+  <!-- Filter by department -->
+  <select id="departmentFilter"
+    class="px-4 py-2 rounded-lg bg-white/10 border border-white/10">
+    <option value="all">All Departments</option>
+    <option>IT</option>
+    <option>Finance</option>
+    <option>HR</option>
+    <option>Logistics</option>
+  </select>
+</div>
+
+<!-- ===================== EXPIRY TABLE ===================== -->
+<div class="bg-white/5 border border-white/10 rounded-xl overflow-x-auto">
+<table class="min-w-[1100px] w-full text-sm">
+
+<thead class="bg-white/10 sticky top-0">
+<tr>
+  <th class="p-3 text-left">Name</th>
+  <th class="p-3 text-left">Department</th>
+  <th class="p-3 text-left">Expiry Date</th>
+  <th class="p-3 text-left">Days Left</th>
+  <th class="p-3 text-left">Priority</th>
+  <th class="p-3 text-left">Added By</th>
+  <th class="p-3 text-left">Actions</th>
+</tr>
+</thead>
+
+<tbody id="assetTableBody"></tbody>
+</table>
+</div>
+
+</div>
+</main>
+
+<!-- ===================== RENEW ASSET MODAL ===================== -->
+<!-- Allows admin to extend expiry date -->
+<div id="renewModal"
+  class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
+
+  <div class="bg-white/10 border border-white/20 rounded-2xl p-6 w-full max-w-md">
+
+    <h2 class="text-2xl font-bold mb-4">Renew Asset</h2>
+
+    <!-- Asset name (read-only) -->
+    <div class="mb-4">
+      <label class="block text-sm mb-2">Asset Name</label>
+      <input id="renewAssetName"
+        class="w-full px-4 py-2 rounded-lg bg-white/10 border border-white/10" readonly />
+    </div>
+
+    <!-- Current expiry date -->
+    <div class="mb-4">
+      <label class="block text-sm mb-2">Current Expiry</label>
+      <input id="renewCurrentExpiry"
+        class="w-full px-4 py-2 rounded-lg bg-white/10 border border-white/10" readonly />
+    </div>
+
+    <!-- New expiry date -->
+    <div class="mb-4">
+      <label class="block text-sm mb-2">New Expiry Date</label>
+      <input id="renewNewExpiry" type="date"
+        class="w-full px-4 py-2 rounded-lg bg-white/10 border border-white/10" />
+    </div>
+
+    <!-- Modal buttons -->
+    <div class="flex gap-3">
+      <button onclick="saveRenewal()"
+        class="flex-1 px-4 py-2 rounded-lg bg-cyan-500 hover:bg-cyan-600 text-black font-semibold">
+        Save Renewal
+      </button>
+      <button onclick="closeRenewModal()"
+        class="flex-1 px-4 py-2 rounded-lg bg-white/20 hover:bg-white/30">
+        Cancel
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== SHARED ADMIN LAYOUT ===================== -->
+<script>
+/**
+ * Loads the admin sidebar & header layout
+ */
+async function loadAdminLayout(){
+  const res = await fetch("admin-layout.html");
+  const html = await res.text();
+  document.body.insertAdjacentHTML("afterbegin", html);
+}
+
+/**
+ * Toggles sidebar visibility
+ */
+function toggleSidebar(){
+  sidebar.classList.toggle("-translate-x-full");
+  overlay.classList.toggle("hidden");
+}
+
+/**
+ * Logs admin out
+ */
+function logout(){
+  auth.signOut().then(()=>location.href="login.html");
+}
+
+/* Load admin layout */
+loadAdminLayout();
+</script>
+
+<!-- ===================== PAGE LOGIC ===================== -->
+<script>
+/* DOM references */
+const searchInputEl = document.getElementById('searchInput');
+const statusFilterEl = document.getElementById('statusFilter');
+const departmentFilterEl = document.getElementById('departmentFilter');
+const assetTableBody = document.getElementById('assetTableBody');
+
+/* Stores all fetched assets */
+let allAssets = [];
+
+/* Stores currently renewing asset ID */
+let renewingAssetId = null;
+
+/**
+ * Authentication check
+ * Ensures only admins can access this page
+ */
+auth.onAuthStateChanged(async user => {
+  if (!user) return location.href = "login.html";
+
+  const udoc = await db.collection("users").doc(user.uid).get();
+  if (!udoc.exists || udoc.data().role !== "admin") {
+    alert("Admin access only");
+    return location.href = "login.html";
+  }
+
+  loadAssets();
+});
+
+/**
+ * Fetch approved assets from Firestore
+ */
+async function loadAssets(){
+  assetTableBody.innerHTML =
+    `<tr><td colspan="7" class="p-4 text-center text-white/60">Loading…</td></tr>`;
+
+  const snap = await db.collection("assets")
+    .where("status","==","approved")
+    .get();
+
+  allAssets = snap.docs.map(d => ({ id:d.id, data:d.data() }));
+  updateSummary();
+  renderTable();
+}
+
+/**
+ * Updates summary card counts
+ */
+function updateSummary(){
+  let expired=0, soon=0, threeMonth=0;
+  const today = new Date();
+
+  allAssets.forEach(({data:a})=>{
+    const diff = Math.ceil((new Date(a.expiryDate) - today)/86400000);
+    if(diff<=0) expired++;
+    else if(diff<=30) soon++;
+    else if(diff<=90) threeMonth++;
+  });
+
+  expiredCount.textContent = expired;
+  soonCount.textContent = soon;
+  threeMonthCount.textContent = threeMonth;
+}
+
+/**
+ * Renders filtered expiry table
+ */
+function renderTable(){
+  const s = searchInputEl.value.toLowerCase();
+  const f = statusFilterEl.value;
+  const d = departmentFilterEl.value;
+  const today = new Date();
+  let rows = "";
+
+  allAssets.forEach(({id,data:a})=>{
+    const diff = Math.ceil((new Date(a.expiryDate)-today)/86400000);
+    if(diff>90) return;
+
+    if(s && !((a.name||"")+" "+(a.description||"")).toLowerCase().includes(s)) return;
+    if(d!=="all" && a.department!==d) return;
+
+    let label="Warning", badge="bg-orange-500/20 text-orange-300";
+    if(diff<=0){ label="Expired"; badge="bg-red-500/30 text-red-300"; }
+    else if(diff<=30){ label="Critical"; badge="bg-yellow-500/20 text-yellow-300"; }
+
+    if(f==="expired" && diff>0) return;
+    if(f==="critical" && (diff<=0 || diff>30)) return;
+    if(f==="warning" && (diff<=30 || diff>90)) return;
+
+    rows += `
+      <tr class="border-b border-white/5 hover:bg-white/5">
+        <td class="p-3 font-semibold">${escapeHtml(a.name)}</td>
+        <td class="p-3">${escapeHtml(a.department||"")}</td>
+        <td class="p-3">${a.expiryDate}</td>
+        <td class="p-3 ${diff<=0?"text-red-400":"text-yellow-400"}">
+          ${diff<=0?"Expired":diff+" days"}
+        </td>
+        <td class="p-3">
+          <span class="px-3 py-1 rounded-full text-xs font-semibold ${badge}">
+            ${label}
+          </span>
+        </td>
+        <td class="p-3 text-white/70">${escapeHtml(a.createdBy||"")}</td>
+        <td class="p-3">
+          <button onclick="openRenewModal('${id}')"
+            class="px-3 py-1 rounded-lg bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 text-sm">
+            Renew
+          </button>
+        </td>
+      </tr>`;
+  });
+
+  assetTableBody.innerHTML = rows ||
+    `<tr><td colspan="7" class="p-4 text-center text-white/60">
+      No assets expiring within 90 days
+    </td></tr>`;
+}
+
+/**
+ * Opens renewal modal and pre-fills asset info
+ */
+function openRenewModal(id){
+  renewingAssetId=id;
+  const a = allAssets.find(x=>x.id===id).data;
+  renewAssetName.value = a.name;
+  renewCurrentExpiry.value = a.expiryDate;
+  renewNewExpiry.value = "";
+  renewModal.classList.remove("hidden");
+}
+
+/**
+ * Closes renewal modal
+ */
+function closeRenewModal(){
+  renewModal.classList.add("hidden");
+  renewingAssetId=null;
+}
+
+/**
+ * Saves renewed expiry date to Firestore
+ */
+async function saveRenewal(){
+  if(!renewingAssetId) return;
+  const v = renewNewExpiry.value;
+  if(!v) return alert("Select new expiry");
+
+  const diff = Math.ceil((new Date(v)-new Date())/86400000);
+  await db.collection("assets").doc(renewingAssetId).update({
+    expiryDate:v,
+    remindBeforeDays:diff,
+    lastRenewed:firebase.firestore.FieldValue.serverTimestamp()
+  });
+
+  closeRenewModal();
+  loadAssets();
+}
+
+/**
+ * Escapes HTML to prevent XSS
+ */
+function escapeHtml(s){
+  return String(s||"").replace(/[&<>"']/g,m=>({
+    "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"
+  }[m]));
+}
+
+/* Re-render on filter change */
+searchInputEl.oninput = renderTable;
+statusFilterEl.onchange = renderTable;
+departmentFilterEl.onchange = renderTable;
+</script>
+
+</body>
+</html>

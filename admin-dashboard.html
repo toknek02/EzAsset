@@ -1,851 +1,197 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="utf-8" />
-    <title>Manage Assets - AzAsset</title>
-    <link rel="stylesheet" href="style.css">
+<meta charset="utf-8" />
+<title>Add Asset - AzAsset</title>
 
-    <!-- Firebase -->
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
-    <script src="firebase-config.js"></script>
+<!-- Tailwind CSS for UI styling -->
+<script src="https://cdn.tailwindcss.com"></script>
 
-    <!-- SheetJS for Excel exports -->
-    <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 
-    <style>
-        /* Page layout (keeps your theme) */
-        body {
-            background: linear-gradient(135deg,#0a0f1f,#1a2337,#0b1528);
-            background-size: cover;
-            background-attachment: fixed;
-            display: flex;
-            justify-content: center;
-            align-items: flex-start;
-            min-height: 100vh;
-            padding-top: 120px;
-        }
-        header { background: rgba(0,0,0,0.35); backdrop-filter: blur(8px); border-bottom:1px solid rgba(255,255,255,0.08); }
-
-        .dashboard-container { width:92%; max-width:1200px; margin:20px auto; }
-        .dashboard-title { text-align:center; color: whitesmoke; text-shadow: 2px 2px 6px lightblue; margin-bottom:18px; }
-
-        .controls-row { display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-bottom:14px; }
-        .controls-row .filter-input, .controls-row .filter-select {
-            padding:10px; border-radius:10px; background: rgba(255,255,255,0.08); border:none; color: white;
-            backdrop-filter: blur(6px); font-size:0.95rem;
-        }
-
-        /* Export dropdown */
-        .export-dropdown { position: relative; display:inline-block; }
-        .export-btn {
-            padding:10px 12px; border-radius:8px; background: rgba(255,255,255,0.08); color:white; border:none; cursor:pointer;
-            display:flex; align-items:center; gap:8px;
-        }
-        .export-menu {
-            display:none; position:absolute; right:0; top:110%; background: rgba(10,14,24,0.98); border-radius:8px; padding:8px;
-            box-shadow: 0 6px 18px rgba(0,0,0,0.5); min-width:220px; z-index:3000;
-        }
-        .export-menu button {
-            width:100%; text-align:left; padding:8px 10px; background:transparent; color:white; border:none; cursor:pointer; border-radius:6px;
-        }
-        .export-menu button:hover { background: rgba(255,255,255,0.04); }
-
-        /* Add panel */
-        .dashboard-panel { background: rgba(255,255,255,0.06); border-radius:12px; padding:18px; margin-bottom:18px; border:1px solid rgba(255,255,255,0.06); }
-        .dashboard-input { width:100%; padding:10px 12px; margin-bottom:10px; border-radius:8px; border:1px solid rgba(255,255,255,0.08); background:transparent; color:whitesmoke; }
-        .dashboard-btn { padding:10px 12px; border-radius:8px; border:none; background:whitesmoke; color:black; font-weight:600; cursor:pointer; }
-
-        /* Table */
-        .table-wrap { background: rgba(255,255,255,0.03); border-radius:12px; overflow:auto; border:1px solid rgba(255,255,255,0.06); }
-        table.asset-table { width:100%; border-collapse:collapse; min-width:1000px; color: whitesmoke; }
-        table.asset-table thead th {
-            position: sticky; top: 0; background: rgba(255,255,255,0.03); color: #e6f0ff; font-weight:600; padding:12px 10px; text-align:left; border-bottom:1px solid rgba(255,255,255,0.06); }
-        table.asset-table tbody td { padding:12px 10px; border-bottom:1px solid rgba(255,255,255,0.03); vertical-align: middle; }
-        table.asset-table tbody tr:hover { background: rgba(255,255,255,0.02); }
-
-        /* Status badges and action icons (white minimal) reused from prior */
-        .badge { padding:6px 8px; border-radius:8px; font-weight:600; font-size:.9rem; display:inline-block; }
-        .badge.safe { background: rgba(124,255,138,0.12); color:#b7ffcf; border:1px solid rgba(124,255,138,0.18); }
-        .badge.soon { background: rgba(255,213,79,0.08); color:#fff2c9; border:1px solid rgba(255,213,79,0.12); }
-        .badge.expired { background: rgba(255,77,77,0.08); color:#ffd6d6; border:1px solid rgba(255,77,77,0.12); }
-
-        .action-cell { display:flex; gap:8px; align-items:center; }
-        .icon-btn { width:36px; height:36px; border-radius:8px; display:inline-flex; align-items:center; justify-content:center; background: rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.06); cursor:pointer; color: white; transition:.12s; }
-        .icon-btn:hover { background: rgba(255,255,255,0.12); transform: translateY(-1px); }
-        .icon-delete { background: rgba(255,77,77,0.12); border: 1px solid rgba(255,77,77,0.18); color: #ffd6d6; }
-        .muted { color: rgba(255,255,255,0.7); font-size:0.95rem; }
-
-        .btn-approve{
-            background:#00ffc3;
-            border:none;
-            color:#00352a;
-            font-weight:600;
-            padding:6px 12px;
-            border-radius:6px;
-            cursor:pointer;
-        }
-        .btn-approve:hover{
-            background:#45ffda;
-        }
-       .btn-reject{
-            background:#ff4e4e;
-            border:none;
-            color:white;
-            font-weight:600;
-            padding:6px 12px;
-            border-radius:6px;
-            cursor:pointer;
-        }
-        .btn-reject:hover{
-            background:#ff6e6e;
-        }
-
-
-        @media (max-width:720px){ .controls-row { flex-direction:column; } .controls-row .filter-input, .controls-row .filter-select { width:100%; } }
-    </style>
+<!-- Firebase configuration -->
+<script src="firebase-config.js"></script>
 </head>
-<body>
 
-<header>
-    <h2 class="logo">AzAsset</h2>
-    <nav class="navigation">
-        <a href="admin-home.html">Admin Home</a>
-        <button class="btnLogin-popup" onclick="logout()">Logout</button>
-        <h1>Manage Assets — Table View</h1>
-    </nav>
+<body class="min-h-screen bg-gradient-to-br from-[#0a0f1f] via-[#1a2337] to-[#0b1528] text-white pt-32">
+
+<!-- ===================== HEADER ===================== -->
+<header
+  class="fixed top-0 left-0 w-full z-50 backdrop-blur-md bg-black/40
+         border-b border-white/10 px-10 py-5 flex justify-between items-center">
+
+  <!-- System name -->
+  <h2 class="text-2xl font-bold">AzAsset</h2>
+
+  <!-- Navigation -->
+  <nav class="flex gap-4 items-center">
+    <a href="admin-asset-table.html" class="hover:text-cyan-400">
+      Assets Table
+    </a>
+
+    <button onclick="logout()"
+      class="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20">
+      Logout
+    </button>
+  </nav>
 </header>
 
-<div class="dashboard-container">
-    
+<!-- ===================== ADD ASSET CARD ===================== -->
+<div class="max-w-xl mx-auto bg-white/5 border border-white/10 rounded-xl p-6">
 
-    <div class="controls-row">
-        <input id="searchInput" class="filter-input" placeholder="Search name or description..." />
+<h1 class="text-2xl font-bold mb-4">Add New Asset</h1>
 
-        <select id="expiryFilter" class="filter-select">
-            <option value="all">All</option>
-            <option value="soon">Expiring Soon</option>
-            <option value="expired">Expired</option>
-        </select>
+<!-- ===================== MANUAL ADD FORM ===================== -->
+<form id="addAssetForm" class="grid gap-3">
 
-        <select id="departmentFilter" class="filter-select" style="display:none;">
-            <option value="all">All Departments</option>
-            <option value="IT">IT</option>
-            <option value="Finance">Finance</option>
-            <option value="HR">HR</option>
-            <option value="Logistics">Logistics</option>
-        </select>
+  <!-- Asset name -->
+  <input id="name"
+    class="px-4 py-2 rounded bg-white/10 border border-white/10"
+    placeholder="Asset Name"
+    required>
 
-        <div style="flex:1"></div>
+  <!-- Description -->
+  <input id="description"
+    class="px-4 py-2 rounded bg-white/10 border border-white/10"
+    placeholder="Description">
 
-        <!-- Export dropdown (Option B) -->
-        <div class="export-dropdown">
-            <button id="exportBtn" class="export-btn">Export ▼</button>
-            <div id="exportMenu" class="export-menu" aria-hidden="true">
-                <button onclick="exportFilteredCSV()">Export Filtered (CSV)</button>
-                <button onclick="exportFilteredExcel()">Export Filtered (Excel)</button>
-                <hr style="border:none;border-top:1px solid rgba(255,255,255,0.04);margin:6px 0">
-                <button id="exportFullCSVBtn" onclick="exportFullCSV()">Export Full (CSV)</button>
-                <button id="exportFullXLSBtn" onclick="exportFullExcel()">Export Full (Excel)</button>
-                <button id="exportGroupedXLSBtn" onclick="exportGroupedExcel()">Export Grouped (Excel - by department)</button>
-            </div>
-        </div>
+  <!-- Purchase date -->
+  <input id="purchaseDate"
+    type="date"
+    class="px-4 py-2 rounded bg-white/10 border border-white/10"
+    required>
 
-        <input type="file" id="csvInput" accept=".csv" style="display:none" onchange="handleCSVImport(event)">
-        <button class="dashboard-btn" onclick="document.getElementById('csvInput').click()">Import CSV</button>
+  <!-- Expiry date -->
+  <input id="expiryDate"
+    type="date"
+    class="px-4 py-2 rounded bg-white/10 border border-white/10"
+    required
+    onchange="calcReminder()">
 
+  <!-- Hidden reminder field -->
+  <input id="remindBeforeDays" type="hidden">
 
-        <button class="dashboard-btn" onclick="scrollToAdd()">Add New Asset</button>
-    </div>
+  <!-- Department -->
+  <select id="department"
+    class="px-4 py-2 rounded bg-white/10 border border-white/10">
+    <option>IT</option>
+    <option>Finance</option>
+    <option>HR</option>
+    <option>Logistics</option>
+  </select>
 
-    <!-- ADD ASSET -->
-    <div class="dashboard-panel" id="addPanel">
-        <h2>Add New Asset</h2>
-        <form id="addAssetForm">
-            <input id="name" class="dashboard-input" placeholder="Asset Name" required>
-            <input id="description" class="dashboard-input" placeholder="Description (optional)">
-            <label class="muted">Purchase Date</label>
-            <input id="purchaseDate" class="dashboard-input" type="date" required>
-            <label class="muted">Expiry Date</label>
-            <input id="expiryDate" class="dashboard-input" type="date" required onchange="autoCalculateReminder()">
-            <input id="remindBeforeDays" class="dashboard-input" type="number" style="display:none;">
-            <select id="departmentSelect" class="dashboard-input">
-                <option value="" disabled selected>Select Department</option>
-                <option value="IT">IT</option>
-                <option value="Finance">Finance</option>
-                <option value="HR">HR</option>
-                <option value="Logistics">Logistics</option>
-            </select>
-            <div style="display:flex; gap:10px; margin-top:8px;">
-                <button type="submit" class="dashboard-btn">Save Asset</button>
-                <button type="button" class="dashboard-btn" onclick="document.getElementById('addAssetForm').reset()">Reset</button>
-            </div>
-        </form>
-    </div>
+  <!-- Submit -->
+  <button
+    class="px-4 py-2 rounded bg-white text-black font-semibold">
+    Save Asset
+  </button>
+</form>
 
-    <!-- TABLE -->
-    <div class="table-wrap dashboard-panel" style="padding:10px 12px;">
-        <table class="asset-table" id="assetTable">
-            <thead>
-                <tr>
-                    <th style="width:240px">Name</th>
-                    <th style="width:120px">Department</th>
-                    <th style="width:130px">Purchase Date</th>
-                    <th style="width:130px">Expiry Date</th>
-                    <th style="width:120px">Status</th>
-                    <th style="width:160px">Added By</th>
-                    <th style="width:140px">Actions</th>
-                </tr>
-            </thead>
-            <tbody id="assetTableBody"></tbody>
-        </table>
-    </div>
+<hr class="my-6 border-white/10">
+
+<!-- ===================== CSV IMPORT ===================== -->
+
+<!-- Hidden file input -->
+<input type="file"
+  id="csvInput"
+  accept=".csv"
+  hidden
+  onchange="importCSV(event)">
+
+<!-- Trigger CSV import -->
+<button onclick="csvInput.click()"
+  class="w-full px-4 py-2 rounded bg-cyan-500 text-black font-semibold">
+  Import CSV
+</button>
+
 </div>
 
-<!-- VIEW MODAL -->
-<div id="viewModal" class="modal-bg"><div class="modal-box">
-    <div class="modal-title">Asset Details</div>
-    <div id="viewContent" style="line-height:1.6;"></div>
-    <div class="modal-actions" style="margin-top:12px;">
-        <button class="dashboard-btn" onclick="closeViewModal()">Close</button>
-    </div>
-</div></div>
-
-<!-- EDIT MODAL -->
-<div id="editModal" class="modal-bg"><div class="modal-box">
-    <div class="modal-title">Edit Asset</div>
-    <input id="edit-name" class="modal-field" placeholder="Name">
-    <input id="edit-description" class="modal-field" placeholder="Description">
-    <label class="muted">Purchase Date</label>
-    <input id="edit-purchaseDate" class="modal-field" type="date">
-    <label class="muted">Expiry Date</label>
-    <input id="edit-expiryDate" class="modal-field" type="date" onchange="autoEditReminder()">
-    <input id="edit-remindBeforeDays" type="hidden">
-    <div id="edit-dep-wrapper">
-        <label class="muted">Department</label>
-        <select id="edit-department" class="modal-field">
-            <option value="IT">IT</option>
-            <option value="Finance">Finance</option>
-            <option value="HR">HR</option>
-            <option value="Logistics">Logistics</option>
-        </select>
-    </div>
-    <div class="modal-actions" style="margin-top:10px;">
-        <button id="saveEditBtn" class="dashboard-btn">Save Changes</button>
-        <button class="close-btn" onclick="closeEditModal()">Close</button>
-    </div>
-</div></div>
-
+<!-- ===================== PAGE LOGIC ===================== -->
 <script>
-/* -------------------------
-   DOM references
---------------------------*/
-const searchInputEl = document.getElementById('searchInput');
-const expiryFilterEl = document.getElementById('expiryFilter');
-const departmentFilterEl = document.getElementById('departmentFilter');
-const nameEl = document.getElementById('name');
-const descriptionEl = document.getElementById('description');
-const purchaseDateEl = document.getElementById('purchaseDate');
-const expiryDateEl = document.getElementById('expiryDate');
-const remindBeforeEl = document.getElementById('remindBeforeDays');
-const departmentSelectEl = document.getElementById('departmentSelect');
-const assetTableBody = document.getElementById('assetTableBody');
 
-const exportBtn = document.getElementById('exportBtn');
-const exportMenu = document.getElementById('exportMenu');
-const exportFullCSVBtn = document.getElementById('exportFullCSVBtn');
-const exportFullXLSBtn = document.getElementById('exportFullXLSBtn');
-const exportGroupedXLSBtn = document.getElementById('exportGroupedXLSBtn');
-
-let currentUserRole = '';
-let currentUserDepartment = '';
-let editingAssetId = null;
-
-// keep last loaded assets (array of {id, data})
-let lastLoadedAssets = [];
-
-/* -------------------------
-   Auth + Role load
---------------------------*/
-auth.onAuthStateChanged(async user => {
-    if (!user) return window.location.href = 'login.html';
-
-    const udoc = await db.collection('users').doc(user.uid).get();
-    const udata = udoc.exists ? udoc.data() : {};
-    currentUserRole = udata.role || '';
-    currentUserDepartment = udata.department || '';
-
-    // show department filter and controls to admin
-    if (currentUserRole === 'admin') {
-        departmentFilterEl.style.display = 'block';
-        departmentSelectEl.style.display = 'block';
-        document.getElementById('edit-dep-wrapper').style.display = 'block';
-    } else {
-        departmentFilterEl.style.display = 'none';
-        departmentSelectEl.style.display = 'none';
-        document.getElementById('edit-dep-wrapper').style.display = 'none';
-    }
-
-    // Admin-only export buttons enabled/disabled by role
-    if (currentUserRole !== 'admin') {
-        exportFullCSVBtn.style.display = 'none';
-        exportFullXLSBtn.style.display = 'none';
-        exportGroupedXLSBtn.style.display = 'none';
-    }
-
-    await loadAssets();
+/**
+ * Authentication guard
+ * Redirects unauthenticated users to login page
+ */
+auth.onAuthStateChanged(u=>{
+  if(!u) location.href='login.html';
 });
 
-/* -------------------------
-   Helpers
---------------------------*/
-function logout(){ auth.signOut().then(()=> window.location.href='login.html'); }
-function scrollToAdd(){ document.getElementById('addPanel').scrollIntoView({behavior:'smooth', block:'center'}); }
-
-function formatDate(d){
-    if(!d) return '';
-    if (typeof d === 'string' && d.includes('-')) return d;
-    try {
-        const dt = new Date(d);
-        if (isNaN(dt.getTime())) return d;
-        return dt.toISOString().slice(0,10);
-    } catch(e){ return d; }
+/**
+ * Logs admin out and redirects to login page
+ */
+function logout(){
+  auth.signOut().then(()=>location.href='login.html');
 }
 
-function calcStatus(a){
-    const today = new Date();
-    const expiry = new Date(a.expiryDate);
-    const diffDays = Math.ceil((expiry - today) / (1000*60*60*24));
-    let status = 'Safe';
-    if (diffDays <= 0) status = 'Expired';
-    else if (diffDays <= (a.remindBeforeDays || 0)) status = `Expiring soon (${diffDays})`;
-    return { diffDays, status };
+/**
+ * Calculates reminder days based on expiry date
+ * Stores value in hidden input for Firestore
+ */
+function calcReminder(){
+  const d = new Date(expiryDate.value);
+  remindBeforeDays.value =
+    Math.max(0, Math.ceil((d - new Date()) / 86400000));
 }
 
-/* -------------------------
-   Add Asset
---------------------------*/
-document.getElementById('addAssetForm').addEventListener('submit', async (ev) => {
-    ev.preventDefault();
-    const user = auth.currentUser;
-    if (!user) return alert('Not logged in');
+/**
+ * Handles manual asset submission
+ * Saves asset directly as approved admin entry
+ */
+addAssetForm.onsubmit = async e => {
+  e.preventDefault();
 
-    const nameVal = nameEl.value.trim();
-    const descVal = descriptionEl.value.trim();
-    const purchaseVal = purchaseDateEl.value;
-    const expiryVal = expiryDateEl.value;
-    const remindVal = parseInt(remindBeforeEl.value) || 0;
+  const u = auth.currentUser;
 
-    let department = currentUserDepartment;
-    if (currentUserRole === 'admin') {
-        department = departmentSelectEl.value;
-        if (!department) return alert('Select department');
-    }
+  await db.collection('assets').add({
+    name: name.value,
+    description: description.value,
+    purchaseDate: purchaseDate.value,
+    expiryDate: expiryDate.value,
+    remindBeforeDays: +remindBeforeDays.value,
+    department: department.value,
+    createdBy: u.email,
+    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+  });
 
-    const asset = {
-        name: nameVal,
-        description: descVal,
-        purchaseDate: purchaseVal,
-        expiryDate: expiryVal,
-        remindBeforeDays: remindVal,
-        department,
-        userId: user.uid,
-        createdBy: user.email || null,
-        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-        status: "approved",
-        approvedBy: user.email,
-        approvedAt: firebase.firestore.FieldValue.serverTimestamp(),
+  alert('Asset added');
+  addAssetForm.reset();
+};
 
-    };
+/**
+ * Bulk CSV import handler
+ * Reads CSV file and inserts each row as an asset
+ *
+ * Expected CSV format:
+ * name,description,purchaseDate,expiryDate,department
+ */
+async function importCSV(e){
+  const text = await e.target.files[0].text();
 
-    try {
-        await db.collection('assets').add(asset);
-        document.getElementById('addAssetForm').reset();
-        loadAssets();
-        alert('Asset added');
-    } catch (err) {
-        console.error(err);
-        alert('Failed to save asset');
-    }
-});
+  // Skip CSV header row
+  const rows = text.trim().split('\n').slice(1);
 
-/* -------------------------
-   Load assets -> fill table
---------------------------*/
-async function loadAssets(){
-    assetTableBody.innerHTML = '<tr><td colspan="7" class="muted">Loading…</td></tr>';
+  for(const r of rows){
+    const [n,d,p,ex,dep] = r.split(',');
 
-    const searchText = (searchInputEl.value || '').toLowerCase();
-    const expiryFilter = expiryFilterEl.value;
-    const deptFilter = departmentFilterEl.value;
-
-    let query = db.collection('assets');
-    if (currentUserRole !== 'admin') query = query.where('department', '==', currentUserDepartment);
-
-    try {
-        const snap = await query.orderBy('createdAt','desc').get();
-        lastLoadedAssets = snap.docs.map(d => ({ id: d.id, data: d.data() })); // store full snapshot locally
-        let rows = '';
-
-        lastLoadedAssets.forEach(({id, data: a}) => {
-            // search across name & description
-            const combined = ((a.name||'') + ' ' + (a.description||'')).toLowerCase();
-            if (searchText && !combined.includes(searchText)) return;
-
-            if (currentUserRole === 'admin' && deptFilter !== 'all' && a.department !== deptFilter) return;
-
-            const today = new Date();
-            const expiry = new Date(a.expiryDate);
-            const diffDays = Math.ceil((expiry - today) / (1000*60*60*24));
-            let statusClass = 'safe';
-            let statusText = a.status;
-
-            if(a.status === "pending"){
-                statusClass = "soon";
-                statusText = "Pending approval";
-            } else {
-                const today = new Date();
-                const expiry = new Date(a.expiryDate);
-                const diffDays = Math.ceil((expiry - today) / (1000*60*60*24));
-
-                statusText = `Expires in ${diffDays}`;
-                if (diffDays <= 0) {
-                    statusClass = 'expired';
-                    statusText = 'Expired';
-                }
-            }
-
-
-            if (diffDays <= 0) { statusClass = 'expired'; statusText = 'Expired'; }
-            else if (diffDays <= (a.remindBeforeDays || 0)) { statusClass = 'soon'; statusText = `Expiring soon (${diffDays})`; }
-
-            if (expiryFilter === 'soon' && !(diffDays > 0 && diffDays <= (a.remindBeforeDays||0))) return;
-            if (expiryFilter === 'expired' && diffDays > 0) return;
-
-            rows += `
-                <tr>
-                    <td><strong>${escapeHtml(a.name)}</strong><div class="muted" style="margin-top:6px">${escapeHtml(a.description || '')}</div></td>
-                    <td>${escapeHtml(a.department || '')}</td>
-                    <td>${formatDate(a.purchaseDate)}</td>
-                    <td>${formatDate(a.expiryDate)}</td>
-                    <td><span class="badge ${statusClass}">${statusText}</span></td>
-                    <td>${escapeHtml(a.createdBy || 'Unknown')}</td>
-        
-                    <td class="action-cell">
-                    <button class="icon-btn" onclick="openViewModal('${id}')">${svgEye()}</button>
-                    <button class="icon-btn" onclick="openEditModal('${id}')">${svgPencil()}</button>
-                    <button class="icon-btn icon-delete" onclick="deleteAsset('${id}')">${svgTrash()}</button>
-
-                    ${a.status === "pending" ? `
-                        <button class="btn-approve" onclick="approveAsset('${id}')">Approve</button>
-                        <button class="btn-reject" onclick="rejectAsset('${id}')">Reject</button>
-                    `:``}
-                    </td>
-
-                </tr>
-            `;
-        });
-
-        assetTableBody.innerHTML = rows || '<tr><td colspan="7" class="muted">No assets found</td></tr>';
-    } catch (err) {
-        console.error('loadAssets error', err);
-        assetTableBody.innerHTML = '<tr><td colspan="7" class="muted">Error loading assets</td></tr>';
-    }
-}
-
-/* -------------------------
-   Delete
---------------------------*/
-async function deleteAsset(id){
-    if (!confirm('Delete this asset?')) return;
-    try {
-        await db.collection('assets').doc(id).delete();
-        loadAssets();
-    } catch (err) {
-        console.error(err); alert('Failed to delete');
-    }
-}
-
-/* approval function*/
-async function approveAsset(id){
-    const user = auth.currentUser;
-    if(!user) return;
-
-    await db.collection("assets").doc(id).update({
-        status:"approved",
-        approvedBy:user.email,
-        approvedAt:firebase.firestore.FieldValue.serverTimestamp(),
+    await db.collection('assets').add({
+      name: n,
+      description: d,
+      purchaseDate: p,
+      expiryDate: ex,
+      remindBeforeDays:
+        Math.ceil((new Date(ex) - new Date()) / 86400000),
+      department: dep || 'Unassigned',
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
     });
+  }
 
-    loadAssets();
+  alert('CSV imported');
 }
-
-async function rejectAsset(id){
-    if(!confirm("Reject this request? This will delete the item.")) return;
-
-    try{
-        await db.collection("assets").doc(id).delete();
-        alert("Asset rejected and removed.");
-        loadAssets();
-    }
-    catch(err){
-        console.error(err);
-        alert("Failed to delete asset");
-    }
-}
-
-
-/* -------------------------
-   View/Edit modals (unchanged)
---------------------------*/
-async function openViewModal(id){
-    try{
-        const doc = await db.collection('assets').doc(id).get();
-        if(!doc.exists) return alert('Not found');
-        const a = doc.data();
-        const today = new Date();
-        const expiry = new Date(a.expiryDate);
-        const diffDays = Math.ceil((expiry - today) / (1000*60*60*24));
-        document.getElementById('viewContent').innerHTML = `
-            <div><strong>Name:</strong> ${escapeHtml(a.name)}</div>
-            <div><strong>Department:</strong> ${escapeHtml(a.department)}</div>
-            <div><strong>Description:</strong> ${escapeHtml(a.description||'')}</div>
-            <div><strong>Purchase Date:</strong> ${formatDate(a.purchaseDate)}</div>
-            <div><strong>Expiry Date:</strong> ${formatDate(a.expiryDate)}</div>
-            <div><strong>Days left:</strong> ${diffDays}</div>
-            <div><strong>Created by:</strong> ${escapeHtml(a.createdBy||'Unknown')}</div>
-        `;
-        document.getElementById('viewModal').style.display = 'flex';
-    } catch(e){ console.error(e); alert('Failed to load'); }
-}
-function closeViewModal(){ document.getElementById('viewModal').style.display = 'none'; }
-
-async function openEditModal(id){
-    editingAssetId = id;
-    try{
-        const doc = await db.collection('assets').doc(id).get();
-        if(!doc.exists) return alert('Not found');
-        const a = doc.data();
-        document.getElementById('edit-name').value = a.name || '';
-        document.getElementById('edit-description').value = a.description || '';
-        document.getElementById('edit-purchaseDate').value = a.purchaseDate || '';
-        document.getElementById('edit-expiryDate').value = a.expiryDate || '';
-        document.getElementById('edit-remindBeforeDays').value = a.remindBeforeDays || 0;
-        if (currentUserRole === 'admin') document.getElementById('edit-department').value = a.department || '';
-        document.getElementById('editModal').style.display = 'flex';
-    } catch(e){ console.error(e); alert('Failed to load for edit'); }
-}
-function closeEditModal(){ document.getElementById('editModal').style.display = 'none'; }
-
-document.getElementById('saveEditBtn').addEventListener('click', async ()=>{
-    if (!editingAssetId) return;
-    const updated = {
-        name: document.getElementById('edit-name').value.trim(),
-        description: document.getElementById('edit-description').value.trim(),
-        purchaseDate: document.getElementById('edit-purchaseDate').value,
-        expiryDate: document.getElementById('edit-expiryDate').value,
-        remindBeforeDays: parseInt(document.getElementById('edit-remindBeforeDays').value) || 0
-    };
-    if (currentUserRole === 'admin') updated.department = document.getElementById('edit-department').value;
-    try {
-        await db.collection('assets').doc(editingAssetId).update(updated);
-        closeEditModal(); loadAssets(); alert('Updated');
-    } catch(e){ console.error(e); alert('Failed to save'); }
-});
-
-/* -------------------------
-   auto-calc functions
---------------------------*/
-function autoCalculateReminder(){
-    const ex = expiryDateEl.value ? new Date(expiryDateEl.value) : null;
-    if (!ex) return;
-    const diff = Math.ceil((ex - new Date())/(1000*60*60*24));
-    remindBeforeEl.value = diff > 0 ? diff : 0;
-}
-function autoEditReminder(){
-    const exVal = document.getElementById('edit-expiryDate').value;
-    if (!exVal) return;
-    const diff = Math.ceil((new Date(exVal) - new Date())/(1000*60*60*24));
-    document.getElementById('edit-remindBeforeDays').value = diff > 0 ? diff : 0;
-}
-
-/* -------------------------
-   small helpers
---------------------------*/
-function escapeHtml(str){
-    if (!str) return '';
-    return String(str).replace(/[&<>"'`=\/]/g, s => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;','/':'&#47;','`':'&#96;','=':'&#61;' }[s]));
-}
-
-/* -------------------------
-   SVG icons
---------------------------*/
-function svgEye(){ return `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 5C7 5 2.73 8.11 1 12c1.73 3.89 6 7 11 7s9.27-3.11 11-7c-1.73-3.89-6-7-11-7z" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.4"/></svg>`; }
-function svgPencil(){ return `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 21l3-0.75L17.81 9.44l-2.25-2.25L3 21z" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>`; }
-function svgTrash(){ return `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><polyline points="3 6 5 6 21 6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M10 11v6M14 11v6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>`; }
-
-/* -------------------------
-   Export helpers
-   - filtered uses lastLoadedAssets and current filters
-   - full uses a fresh DB read (admin only)
-   - grouped creates one sheet per department (Excel)
---------------------------*/
-
-// Get array of JS objects (flat rows) from an array of assets (docs)
-function assetsToRows(array){
-    return array.map(({id, data: a}) => {
-        const { diffDays, status } = (function(){
-            const today = new Date();
-            const expiry = new Date(a.expiryDate);
-            const diffDays = Math.ceil((expiry - today) / (1000*60*60*24));
-            let status = 'Safe';
-            if (diffDays <= 0) status = 'Expired';
-            else if (diffDays <= (a.remindBeforeDays || 0)) status = `Expiring soon (${diffDays})`;
-            return { diffDays, status };
-        })();
-
-        return {
-            id,
-            name: a.name || '',
-            department: a.department || '',
-            purchaseDate: formatDate(a.purchaseDate),
-            expiryDate: formatDate(a.expiryDate),
-            status,
-            daysLeft: diffDays,
-            addedBy: a.createdBy || ''
-        };
-    });
-}
-
-// Build filtered array from lastLoadedAssets
-function getFilteredArrayFromLastLoaded(){
-    const searchText = (searchInputEl.value || '').toLowerCase();
-    const expiryFilter = expiryFilterEl.value;
-    const deptFilter = departmentFilterEl.value;
-
-    return lastLoadedAssets.filter(({id, data: a}) => {
-        const combined = ((a.name||'') + ' ' + (a.description||'')).toLowerCase();
-        if (searchText && !combined.includes(searchText)) return false;
-        if (currentUserRole === 'admin' && deptFilter !== 'all' && a.department !== deptFilter) return false;
-
-        const expiry = new Date(a.expiryDate);
-        const diffDays = Math.ceil((expiry - new Date()) / (1000*60*60*24));
-        if (expiryFilter === 'soon' && !(diffDays > 0 && diffDays <= (a.remindBeforeDays||0))) return false;
-        if (expiryFilter === 'expired' && diffDays > 0) return false;
-        return true;
-    });
-}
-
-// download CSV
-function downloadCSV(filename, rows){
-    if (!rows || !rows.length) {
-        alert('No data to export');
-        return;
-    }
-    const header = Object.keys(rows[0]);
-    const csv = [
-        header.join(','), 
-        ...rows.map(r => header.map(k => `"${String(r[k]||'').replace(/"/g,'""')}"`).join(','))
-    ].join('\n');
-
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
-}
-
-// Export filtered CSV
-async function exportFilteredCSV(){
-    const arr = getFilteredArrayFromLastLoaded();
-    const rows = assetsToRows(arr);
-    downloadCSV('assets_filtered.csv', rows);
-}
-
-// Export filtered Excel (single sheet)
-async function exportFilteredExcel(){
-    const arr = getFilteredArrayFromLastLoaded();
-    const rows = assetsToRows(arr);
-    if (!rows.length){ alert('No data to export'); return; }
-    if (typeof XLSX === 'undefined') { alert('Excel export requires SheetJS (missing)'); return; }
-    const ws = XLSX.utils.json_to_sheet(rows);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Assets');
-    XLSX.writeFile(wb, 'assets_filtered.xlsx');
-}
-
-// Export full CSV (admin only)
-async function exportFullCSV(){
-    if (currentUserRole !== 'admin') return alert('Only admin can export full dataset');
-    try {
-        const snap = await db.collection('assets').orderBy('createdAt','desc').get();
-        const full = snap.docs.map(d => ({ id: d.id, data: d.data() }));
-        const rows = assetsToRows(full);
-        downloadCSV('assets_full.csv', rows);
-    } catch(err){ console.error(err); alert('Failed to export full CSV'); }
-}
-
-// Export full Excel (admin only)
-async function exportFullExcel(){
-    if (currentUserRole !== 'admin') return alert('Only admin can export full dataset');
-    try {
-        const snap = await db.collection('assets').orderBy('createdAt','desc').get();
-        const full = snap.docs.map(d => ({ id: d.id, data: d.data() }));
-        const rows = assetsToRows(full);
-        if (!rows.length){ alert('No data to export'); return; }
-        if (typeof XLSX === 'undefined') { alert('Excel export requires SheetJS (missing)'); return; }
-        const ws = XLSX.utils.json_to_sheet(rows);
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, 'All Assets');
-        XLSX.writeFile(wb, 'assets_full.xlsx');
-    } catch(err){ console.error(err); alert('Failed to export full Excel'); }
-}
-
-// Export grouped Excel (one sheet per department) (admin only)
-async function exportGroupedExcel(){
-    if (currentUserRole !== 'admin') return alert('Only admin can export grouped dataset');
-    try {
-        const snap = await db.collection('assets').orderBy('createdAt','desc').get();
-        const full = snap.docs.map(d => ({ id: d.id, data: d.data() }));
-        if (!full.length) { alert('No data to export'); return; }
-        if (typeof XLSX === 'undefined') { alert('Excel export requires SheetJS (missing)'); return; }
-
-        // group by department
-        const groups = {};
-        full.forEach(item => {
-            const dep = item.data.department || 'Unassigned';
-            groups[dep] = groups[dep] || [];
-            groups[dep].push(item);
-        });
-
-        const wb = XLSX.utils.book_new();
-        for (const depName of Object.keys(groups)) {
-            const rows = assetsToRows(groups[depName]);
-            const ws = XLSX.utils.json_to_sheet(rows);
-            // sheet name must be <=31 chars
-            const safeName = depName.toString().substring(0,31);
-            XLSX.utils.book_append_sheet(wb, ws, safeName);
-        }
-        XLSX.writeFile(wb, 'assets_grouped_by_department.xlsx');
-    } catch(err){ console.error(err); alert('Failed to export grouped Excel'); }
-}
-
-/* -------------------------
-   Small UI: export dropdown open/close
---------------------------*/
-exportBtn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    const open = exportMenu.style.display === 'block';
-    exportMenu.style.display = open ? 'none' : 'block';
-    exportMenu.setAttribute('aria-hidden', open ? 'true' : 'false');
-});
-window.addEventListener('click', () => { exportMenu.style.display = 'none'; exportMenu.setAttribute('aria-hidden', 'true'); });
-
-/* -------------------------
-   Wire up filters to reload table
---------------------------*/
-searchInputEl.addEventListener('input', () => loadAssets());
-expiryFilterEl.addEventListener('change', () => loadAssets());
-departmentFilterEl.addEventListener('change', () => loadAssets());
-/* -------------------------
-   CSV IMPORT (Option B)
---------------------------*/
-
-async function handleCSVImport(event) {
-    const file = event.target.files[0];
-    if (!file) return;
-
-    if (!file.name.endsWith(".csv")) {
-        alert("Please upload a valid CSV file.");
-        return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = async function(e) {
-        const text = e.target.result;
-        const rows = text.trim().split("\n").map(r => r.split(",").map(v => v.replace(/"/g, "").trim()));
-
-        // Expected columns:
-        // name, description, purchaseDate, expiryDate, department
-        // Expected columns:
-        const expectedHeader = ["name", "description", "purchasedate", "expirydate", "department"];
-
-        // Remove BOM + lowercase + trim
-        let header = rows.shift().map(h =>
-            h.replace(/^\uFEFF/, "").trim().toLowerCase()
-        );
-
-        // Compare against expected headers
-        const headerMatch = expectedHeader.every((col, i) => header[i] === col);
-
-        if (!headerMatch) {
-            alert(
-                "CSV header invalid.\nRequired columns:\n" + expectedHeader.join(", ") +
-                "\n\nYour CSV header detected:\n" + header.join(", ")
-            );
-            return;
-        }
-
-
-        if (!headerMatch) {
-            alert("CSV header invalid. Required columns:\n" + expectedHeader.join(", "));
-            return;
-        }
-
-        let imported = 0;
-        const user = auth.currentUser;
-
-        for (const row of rows) {
-            const [name, description, purchaseDate, expiryDate, department] = row;
-
-            if (!name || !purchaseDate || !expiryDate) continue; // required fields
-
-            // Calculate auto reminder days
-            const diff = Math.ceil((new Date(expiryDate) - new Date()) / (1000 * 60 * 60 * 24));
-            const remindBeforeDays = diff > 0 ? diff : 0;
-
-            const assetData = {
-                name,
-                description: description || "",
-                purchaseDate,
-                expiryDate,
-                remindBeforeDays,
-                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-                createdBy: user.email || "Unknown",
-                userId: user.uid,
-                status: "approved",
-                approvedBy: user.email,
-                approvedAt: firebase.firestore.FieldValue.serverTimestamp(),
-            };
-
-            // Admin can set department from CSV
-            if (currentUserRole === "admin") {
-                assetData.department = department || "Unassigned";
-            } else {
-                // Staff override with their own department
-                assetData.department = currentUserDepartment;
-            }
-
-            try {
-                await db.collection("assets").add(assetData);
-                imported++;
-            } catch (err) {
-                console.error("Import error:", err);
-            }
-        }
-
-        alert(`Imported ${imported} assets successfully.`);
-        loadAssets(); // refresh table
-    };
-
-    reader.readAsText(file);
-}
-
 </script>
+
 </body>
 </html>

@@ -1,0 +1,50 @@
+name,description,purchaseDate,expiryDate,department
+Dell PowerEdge Server R740,Enterprise rack server,2024-06-10,2025-11-15,IT
+HP ProLiant DL380 Gen10,Datacenter server,2024-05-22,2025-12-01,IT
+Cisco Catalyst 9300 Switch,Network core switch,2024-07-01,2025-10-30,IT
+FortiGate 100F Firewall,Network security appliance,2024-06-15,2025-12-20,IT
+Asus TUF Gaming Laptop,Developer workstation,2024-08-01,2026-02-15,IT
+MacBook Pro M2,Design workstation,2024-07-20,2026-01-10,IT
+Dell Latitude 7420,Business laptop,2024-09-10,2025-11-25,IT
+HP EliteDesk 800 G6,Office desktop,2024-10-05,2025-12-05,IT
+Lenovo ThinkPad X1,Executive laptop,2024-08-18,2026-01-30,IT
+Synology NAS DS920+,Backup storage server,2024-06-30,2025-12-15,IT
+HP LaserJet Pro M404dn,Office printer,2024-05-12,2025-10-10,Finance
+Canon ImageRunner 2630,Department printer,2024-06-01,2025-11-05,Finance
+Epson L5290 Printer,Invoice printer,2024-07-15,2025-12-12,Finance
+Brother HL-L6200DW,Finance office printer,2024-09-01,2026-01-20,Finance
+Dell OptiPlex 7090,Accounting workstation,2024-08-25,2025-11-28,Finance
+HP ProBook 450 G9,Finance laptop,2024-10-02,2026-02-10,Finance
+Lenovo ThinkCentre M80s,Payroll desktop,2024-07-10,2025-10-25,Finance
+Samsung Monitor 27-inch,Finance display monitor,2024-09-12,2025-12-18,Finance
+APC Smart-UPS 1500VA,Power backup unit,2024-06-20,2025-11-30,Finance
+Fujitsu ScanSnap iX1600,Document scanner,2024-08-08,2026-01-05,Finance
+Dell Inspiron 15,HR staff laptop,2024-09-01,2025-11-18,HR
+HP Pavilion Desktop,HR office desktop,2024-07-25,2025-12-02,HR
+Canon LBP2900 Printer,HR document printer,2024-06-18,2025-10-15,HR
+Lenovo IdeaPad 3,HR onboarding laptop,2024-08-30,2026-02-01,HR
+Asus ExpertBook B5,HR manager laptop,2024-10-01,2026-01-25,HR
+Samsung Galaxy Tab A,Training tablet,2024-07-05,2025-11-22,HR
+BenQ Projector MX550,Training room projector,2024-06-10,2025-10-30,HR
+HP ScanJet Pro 2500,HR scanner,2024-09-15,2026-02-08,HR
+LG Monitor 24-inch,HR workstation monitor,2024-08-01,2025-12-20,HR
+Logitech Conference Camera,Meeting room device,2024-06-28,2025-11-10,HR
+Zebra TC21 Handheld Scanner,Warehouse scanner,2024-07-12,2025-11-05,Logistics
+Honeywell Barcode Scanner,Inventory scanner,2024-08-15,2026-01-15,Logistics
+Panasonic Toughbook,Warehouse rugged laptop,2024-09-01,2026-02-20,Logistics
+Dell Vostro 3510,Logistics office laptop,2024-10-10,2025-12-30,Logistics
+HP LaserJet MFP M430,Shipping office printer,2024-06-20,2025-10-28,Logistics
+Cisco Meraki MR46,Warehouse WiFi access point,2024-07-05,2025-11-18,Logistics
+Ubiquiti EdgeRouter X,Network router,2024-08-08,2026-01-08,Logistics
+APC Easy UPS 1000VA,Backup power unit,2024-09-15,2025-12-22,Logistics
+Epson TM-T88VI Receipt Printer,Shipping receipt printer,2024-06-30,2025-10-05,Logistics
+Samsung Galaxy S21,Warehouse supervisor phone,2024-07-18,2026-02-12,Logistics
+Microsoft Surface Laptop 5,Admin workstation,2024-08-22,2026-01-18,IT
+Dell UltraSharp U2720Q,4K office monitor,2024-07-30,2025-12-08,IT
+Logitech MX Master 3 Mouse,Productivity accessory,2024-06-15,2025-11-02,IT
+Keychron Mechanical Keyboard,Developer keyboard,2024-08-10,2026-01-28,IT
+TP-Link Archer AX73 Router,Office router,2024-09-05,2025-12-14,IT
+Netgear GS324 Switch,Network switch,2024-07-01,2025-10-20,IT
+Raspberry Pi 4 Model B,IoT test device,2024-06-25,2025-11-12,IT
+Intel NUC Mini PC,Edge computing device,2024-08-18,2026-02-05,IT
+Sony Bravia 55-inch Display,Conference room display,2024-09-01,2026-01-22,IT

@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Edit Asset - AzAsset</title>
+
+<!-- Tailwind CSS for styling -->
+<script src="https://cdn.tailwindcss.com"></script>
+
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+
+<!-- Firebase configuration -->
+<script src="firebase-config.js"></script>
+</head>
+
+<body class="min-h-screen bg-gradient-to-br from-[#0a0f1f] via-[#1a2337] to-[#0b1528] text-white overflow-x-hidden">
+
+<!-- ===================== ADMIN LAYOUT LOADER ===================== -->
+<script>
+/**
+ * Loads the shared admin sidebar & top navigation
+ */
+async function loadAdminLayout(){
+  const res = await fetch("admin-layout.html");
+  const html = await res.text();
+  document.body.insertAdjacentHTML("afterbegin", html);
+}
+
+/**
+ * Toggles sidebar visibility (mobile support)
+ */
+function toggleSidebar(){
+  document.getElementById("sidebar").classList.toggle("-translate-x-full");
+  document.getElementById("overlay").classList.toggle("hidden");
+}
+
+/**
+ * Logs admin out and redirects to login page
+ */
+function logout(){
+  auth.signOut().then(()=>location.href="login.html");
+}
+
+/* Load admin layout on page load */
+loadAdminLayout();
+</script>
+
+<!-- ===================== PAGE CONTENT ===================== -->
+<main class="pt-28 px-6 pb-10">
+
+  <!-- Card container -->
+  <div class="max-w-2xl mx-auto bg-white/5 border border-white/10 rounded-xl p-8">
+
+    <!-- Page title -->
+    <h1 class="text-3xl font-bold text-blue-200 mb-6 text-center">
+      Edit Asset
+    </h1>
+
+    <!-- ===================== EDIT FORM ===================== -->
+    <form id="editAssetForm" class="space-y-4">
+
+      <!-- Asset name -->
+      <div>
+        <label class="text-sm">Asset Name</label>
+        <input id="assetName" required
+          class="w-full px-4 py-2 rounded bg-white/10 border border-white/10">
+      </div>
+
+      <!-- Asset description -->
+      <div>
+        <label class="text-sm">Description</label>
+        <textarea id="assetDescription" rows="3"
+          class="w-full px-4 py-2 rounded bg-white/10 border border-white/10"></textarea>
+      </div>
+
+      <!-- Purchase & expiry dates -->
+      <div class="grid grid-cols-2 gap-4">
+
+        <div>
+          <label class="text-sm">Purchase Date</label>
+          <input id="purchaseDate" type="date" required
+            class="w-full px-4 py-2 rounded bg-white/10 border border-white/10">
+        </div>
+
+        <div>
+          <label class="text-sm">Expiry Date</label>
+          <input id="expiryDate" type="date" required
+            class="w-full px-4 py-2 rounded bg-white/10 border border-white/10">
+        </div>
+
+      </div>
+
+      <!-- Department selection -->
+      <div>
+        <label class="text-sm">Department</label>
+        <select id="department"
+          class="w-full px-4 py-2 rounded bg-white/10 border border-white/10">
+          <option class="text-black">IT</option>
+          <option class="text-black">Finance</option>
+          <option class="text-black">HR</option>
+          <option class="text-black">Logistics</option>
+        </select>
+      </div>
+
+      <!-- Approval status -->
+      <div>
+        <label class="text-sm">Approval Status</label>
+        <select id="status"
+          class="w-full px-4 py-2 rounded bg-white/10 border border-white/10">
+          <option class="text-black" value="approved">Approved</option>
+          <option class="text-black" value="pending">Pending</option>
+          <option class="text-black" value="denied">Denied</option>
+        </select>
+      </div>
+
+      <!-- Action buttons -->
+      <div class="flex gap-3 pt-6">
+
+        <!-- Save changes -->
+        <button type="submit"
+          class="flex-1 py-2 rounded bg-cyan-500 hover:bg-cyan-600 text-black font-semibold">
+          Save Changes
+        </button>
+
+        <!-- Cancel and return -->
+        <button type="button"
+          onclick="history.back()"
+          class="flex-1 py-2 rounded bg-white/10 hover:bg-white/20">
+          Cancel
+        </button>
+
+      </div>
+
+    </form>
+  </div>
+</main>
+
+<!-- ===================== PAGE LOGIC ===================== -->
+<script>
+/**
+ * Retrieve asset ID from URL query string
+ * Example: admin-edit-asset.html?id=ABC123
+ */
+const params = new URLSearchParams(window.location.search);
+const assetId = params.get("id");
+
+/* Input references */
+const assetName = document.getElementById("assetName");
+const assetDescription = document.getElementById("assetDescription");
+const purchaseDate = document.getElementById("purchaseDate");
+const expiryDate = document.getElementById("expiryDate");
+const department = document.getElementById("department");
+const status = document.getElementById("status");
+
+/**
+ * Ensure asset ID exists
+ */
+if (!assetId) {
+  alert("Missing asset ID");
+  history.back();
+}
+
+/**
+ * Authentication & authorization check
+ * Only admins are allowed to edit assets
+ */
+auth.onAuthStateChanged(async user => {
+  if (!user) return location.href = "login.html";
+
+  const udoc = await db.collection("users").doc(user.uid).get();
+  if (!udoc.exists || udoc.data().role !== "admin") {
+    alert("Admins only");
+    return location.href = "login.html";
+  }
+
+  loadAsset();
+});
+
+/**
+ * Loads asset data from Firestore
+ * Pre-fills the edit form
+ */
+async function loadAsset(){
+  const doc = await db.collection("assets").doc(assetId).get();
+
+  if (!doc.exists) {
+    alert("Asset not found");
+    return history.back();
+  }
+
+  const a = doc.data();
+
+  assetName.value = a.name || "";
+  assetDescription.value = a.description || "";
+  purchaseDate.value = a.purchaseDate || "";
+  expiryDate.value = a.expiryDate || "";
+  department.value = a.department || "IT";
+  status.value = a.status || "pending";
+}
+
+/**
+ * Handles form submission
+ * Updates asset details in Firestore
+ */
+editAssetForm.onsubmit = async e => {
+  e.preventDefault();
+
+  /* Calculate remaining days for reminder logic */
+  const exp = new Date(expiryDate.value);
+  const today = new Date();
+  const diffDays = Math.max(
+    0,
+    Math.ceil((exp - today) / 86400000)
+  );
+
+  /* Update Firestore document */
+  await db.collection("assets").doc(assetId).update({
+    name: assetName.value.trim(),
+    description: assetDescription.value.trim(),
+    purchaseDate: purchaseDate.value,
+    expiryDate: expiryDate.value,
+    department: department.value,
+    status: status.value,
+    remindBeforeDays: diffDays,
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+    updatedBy: auth.currentUser.email
+  });
+
+  alert("Asset updated successfully");
+
+  /* Redirect back to asset table */
+  location.href = "admin-asset-table.html";
+};
+</script>
+
+</body>
+</html>

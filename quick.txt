@@ -1,0 +1,435 @@
+AZASSET – PRESENTATION QUICK CHANGE GUIDE
+=========================================
+
+This file helps me quickly modify the system if asked during the presentation.
+
+------------------------------------------------
+1. CHANGE EXPIRY WARNING DAYS (e.g. 30 → 60)
+------------------------------------------------
+Files:
+- admin-home.html
+- user-home.html
+- expiry-dashboard.html
+- user-asset-table.html
+- admin-asset-table.html
+
+What to change:
+Look for:
+  diff <= 30
+
+Change to:
+  diff <= 60   (or any number requested)
+
+Reason:
+This controls when an asset is marked as "Expiring Soon".
+
+------------------------------------------------
+2. CHANGE DEPARTMENTS (Add / Remove)
+------------------------------------------------
+Files:
+- register.html
+- admin-manage-users.html
+- add-asset.html
+- admin-edit-asset.html
+- asset tables (admin & user)
+
+What to do:
+Add or remove department options inside <select> tags:
+  <option>IT</option>
+  <option>Finance</option>
+  <option>HR</option>
+  <option>Logistics</option>
+
+Also update filters where department is checked:
+  if (a.department !== "NEW_DEPT") return;
+
+------------------------------------------------
+3. AUTO-APPROVE USER ACCOUNTS
+------------------------------------------------
+File:
+- register.html
+
+Find:
+  approved: false
+
+Change to:
+  approved: true
+
+Result:
+New users can log in immediately without admin approval.
+
+------------------------------------------------
+4. AUTO-APPROVE ASSET REQUESTS
+------------------------------------------------
+Files:
+- user-asset.html (request asset page)
+- admin-add-asset.html
+
+Change asset creation:
+  status: "pending"
+
+To:
+  status: "approved"
+
+Result:
+Assets appear instantly without admin approval.
+
+------------------------------------------------
+5. HIDE / DISABLE DELETE BUTTONS
+------------------------------------------------
+Files:
+- admin-asset-table.html
+- admin-manage-users.html
+
+Quick option:
+Comment out the delete button HTML:
+  <!-- <button onclick="deleteAsset()">Delete</button> -->
+
+OR disable it:
+  disabled
+  opacity-50
+
+------------------------------------------------
+6. CHANGE ROLE LOGIC (User ↔ Admin)
+------------------------------------------------
+File:
+- login.html
+
+Logic:
+  if (u.role === "admin") → admin dashboard
+  else → user dashboard
+
+To force admin demo:
+Temporarily change:
+  if (true) { location.href = "admin-home.html"; }
+
+------------------------------------------------
+7. SHOW / HIDE NOTIFICATIONS
+------------------------------------------------
+Files:
+- admin-home.html
+- user-home.html
+
+To hide notifications:
+Comment out:
+  loadAdminExpiryNotifications()
+  loadUserExpiryNotifications()
+
+To show more assets:
+Remove or increase limits like:
+  slice(0, 5)
+
+------------------------------------------------
+8. CHANGE STATUS COLORS
+------------------------------------------------
+Files:
+- asset tables
+- expiry dashboard
+
+Look for:
+  bg-red-500
+  bg-yellow-500
+  bg-green-500
+
+Change Tailwind classes to:
+  bg-purple-500
+  bg-blue-500
+etc.
+
+------------------------------------------------
+9. CSV IMPORT FORMAT (ADMIN)
+------------------------------------------------
+CSV Format:
+name,description,purchaseDate,expiryDate,department
+
+Example:
+Laptop,Dell Latitude,2024-01-01,2026-01-01,IT
+
+If asked:
+- CSV is parsed line-by-line
+- Each row is saved as a Firestore document
+- Assets are auto-approved for admin imports
+
+------------------------------------------------
+10. FIRESTORE COLLECTIONS (IMPORTANT)
+------------------------------------------------
+Collections used:
+- users
+- assets
+
+users fields:
+- name
+- email
+- role
+- department
+- approved
+
+assets fields:
+- name
+- description
+- purchaseDate
+- expiryDate
+- department
+- status
+- createdBy
+- userId
+- createdAt
+
+------------------------------------------------
+11. SECURITY & PERMISSIONS (EXPLAIN THIS)
+------------------------------------------------
+Security enforced via:
+- Firebase Authentication
+- Firestore rules
+- Role checks in JavaScript
+
+Examples:
+- Users only see their department assets
+- Admins can see and edit all assets
+- Unapproved users are blocked at login
+
+------------------------------------------------
+12. IF SOMETHING BREAKS DURING DEMO
+------------------------------------------------
+Checklist:
+- Check user is logged in
+- Check Firestore document exists
+- Check role === "admin" or "user"
+- Refresh page
+- Open browser console (F12)
+
+------------------------------------------------
+13. KEY SENTENCE FOR EXAMINER
+------------------------------------------------
+"This system is fully configurable. 
+Business rules like approval flow, expiry thresholds, and departments 
+can be adjusted with minimal code changes."
+
+
+Tailwind
+
+TAILWIND CSS BASIC CHEAT SHEET (AZASSET PROJECT)
+
+SPACING (PADDING & MARGIN)
+
+Padding:
+p-2 = padding all sides
+px-4 = padding left & right
+py-3 = padding top & bottom
+pt-28 = padding top
+pb-10 = padding bottom
+
+Margin:
+m-4 = margin all sides
+mt-6 = margin top
+mb-8 = margin bottom
+mx-auto = center horizontally
+
+FLEXBOX (ALIGNMENT & POSITIONING)
+
+Enable flex:
+flex
+
+Direction:
+flex-row
+flex-col
+
+Align items:
+items-center
+items-start
+items-end
+
+Justify content:
+justify-center
+justify-between
+justify-end
+
+Spacing between items:
+gap-2
+gap-4
+gap-6
+
+GRID SYSTEM
+
+Enable grid:
+grid
+
+Columns:
+grid-cols-1
+grid-cols-2
+grid-cols-3
+
+Responsive grid:
+md:grid-cols-2
+lg:grid-cols-3
+xl:grid-cols-4
+
+WIDTH & HEIGHT
+
+Width:
+w-full
+w-72
+max-w-md
+max-w-7xl
+min-w-[1100px]
+
+Height:
+h-full
+min-h-screen
+
+BACKGROUND COLORS
+
+Solid colors:
+bg-white
+bg-black
+bg-red-500
+bg-blue-500
+bg-cyan-500
+
+Transparent / opacity:
+bg-white/10
+bg-black/40
+bg-red-500/20
+
+Gradients (used in AzAsset):
+bg-gradient-to-br
+from-[#0a0f1f]
+via-[#1a2337]
+to-[#0b1528]
+
+TEXT & FONT STYLING
+
+Font size:
+text-sm
+text-base
+text-lg
+text-xl
+text-2xl
+text-4xl
+
+Font weight:
+font-normal
+font-semibold
+font-bold
+font-extrabold
+
+Text color:
+text-white
+text-white/70
+text-cyan-300
+text-red-400
+
+Text alignment:
+text-left
+text-center
+text-right
+
+BORDERS & ROUNDED CORNERS
+
+Borders:
+border
+border-white
+border-white/10
+border-red-500/30
+
+Rounded corners:
+rounded
+rounded-lg
+rounded-xl
+rounded-2xl
+rounded-full
+
+BUTTON STYLING (COMMON PATTERN)
+
+Typical button:
+px-4 py-2
+rounded-lg
+bg-cyan-500
+hover:bg-cyan-600
+text-black
+font-semibold
+transition
+
+Disabled look:
+opacity-50
+cursor-not-allowed
+
+HOVER, FOCUS & TRANSITIONS
+
+Hover:
+hover:bg-white/20
+hover:text-cyan-400
+hover:shadow-xl
+hover:scale-[1.02]
+
+Focus:
+focus:border-cyan-400
+outline-none
+
+Transitions:
+transition
+duration-300
+
+TABLE STYLING
+
+Table basics:
+w-full
+min-w-[1100px]
+text-sm
+
+Table header:
+bg-white/10
+p-3
+text-left
+
+Table rows:
+border-b
+border-white/5
+hover:bg-white/5
+
+BADGES (STATUS LABELS)
+
+Badge base:
+px-3 py-1
+rounded-full
+text-xs
+font-semibold
+
+Status colors:
+bg-green-500/20 text-green-300
+bg-yellow-500/20 text-yellow-300
+bg-red-500/30 text-red-300
+
+POSITIONING
+
+Fixed elements:
+fixed top-0 left-0
+z-50
+
+Center modal / overlay:
+fixed inset-0
+flex items-center justify-center
+
+RESPONSIVE BREAKPOINTS
+
+sm: 640px and above
+md: 768px and above
+lg: 1024px and above
+xl: 1280px and above
+
+Example:
+grid-cols-1 md:grid-cols-2 lg:grid-cols-3
+hidden md:block
+
+MOST IMPORTANT RULE
+
+Tailwind follows this pattern:
+
+property-value
+
+Examples:
+text-red-400
+bg-white/10
+p-4
+mt-6
+rounded-xl

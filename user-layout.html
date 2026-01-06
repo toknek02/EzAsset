@@ -1,0 +1,57 @@
+<!-- OVERLAY -->
+<div id="overlay"
+  class="fixed inset-0 bg-black/60 hidden z-40"
+  onclick="toggleSidebar()">
+</div>
+
+<!-- SIDEBAR -->
+<aside id="sidebar"
+  class="fixed top-0 left-0 w-64 h-full bg-[#0b1528] border-r border-white/10 z-50
+         transform -translate-x-full transition-transform duration-300">
+
+  <div class="px-6 py-5 border-b border-white/10">
+    <h2 class="text-xl font-bold text-cyan-300">AzAsset</h2>
+    <p class="text-xs text-white/50">User Panel</p>
+  </div>
+
+  <nav class="px-4 py-6 space-y-2 text-sm">
+    <a href="user-home.html"
+      class="block px-4 py-2 rounded hover:bg-white/10">
+      Dashboard
+    </a>
+
+    <a href="user-asset-table.html"
+      class="block px-4 py-2 rounded hover:bg-white/10">
+      Department Assets
+    </a>
+
+    <a href="user-asset.html"
+      class="block px-4 py-2 rounded hover:bg-white/10">
+      Request Asset
+    </a>
+
+    <a href="user-profile.html"
+      class="block px-4 py-2 rounded hover:bg-white/10">
+      My Profile
+    </a>
+
+    <hr class="my-3 border-white/10">
+
+    <button onclick="logout()"
+      class="w-full text-left px-4 py-2 rounded hover:bg-red-500/20 text-red-300">
+      Logout
+    </button>
+  </nav>
+</aside>
+
+<!-- TOP BAR -->
+<header class="fixed top-0 left-0 right-0 h-16 bg-black/40 backdrop-blur-md
+               border-b border-white/10 z-30 flex items-center px-6">
+
+  <button onclick="toggleSidebar()"
+    class="mr-4 px-3 py-2 rounded bg-white/10 hover:bg-white/20">
+    ☰
+  </button>
+
+  <h1 class="text-lg font-semibold">User Panel</h1>
+</header>

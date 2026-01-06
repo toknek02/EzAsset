@@ -1,121 +1,181 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <!-- Character encoding -->
   <meta charset="UTF-8">
-  <title>Register - AzAsset</title>
-  <link rel="stylesheet" href="style.css">
 
+  <!-- Ensures responsive layout on mobile & desktop -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- Page title -->
+  <title>Register - AzAsset</title>
+
+  <!-- Tailwind CSS for styling -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Firebase core libraries -->
+  <!-- Used for authentication and Firestore -->
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+
+  <!-- Firebase project configuration -->
   <script src="firebase-config.js"></script>
 </head>
-<body>
-  <header>
-    <h2 class="logo">AzAsset</h2>
-    <nav class="navigation">
-      <a href="index.html">Home</a>
-      <a href="about.html">About</a>
-      <button onclick="redirectToPage()" class="btnLogin-popup">Login</button>
-    </nav>
-  </header>
 
-  <div class="wrapper">
-    <div class="form-box">
-      <h2>Register</h2>
-      <form onsubmit="registerUser(event)">
+<body class="bg-gradient-to-r from-slate-900 to-slate-800 min-h-screen text-white">
 
-        <div class="input-box">
-            <input id="name" type="text" required>
-            <label>Name</label>
-        </div>
+<!-- ===================== HEADER ===================== -->
+<header class="flex justify-between items-center px-10 py-5">
+  <!-- App name -->
+  <h2 class="text-2xl font-bold">AzAsset</h2>
 
-        <div class="input-box">
-            <input id="email" type="email" required>
-            <label>Email</label>
-        </div>
+  <!-- Navigation -->
+  <nav class="flex gap-6 items-center">
+    <a href="index.html" class="hover:text-blue-400">Home</a>
+    <a href="about.html" class="hover:text-blue-400">About</a>
 
-        <div class="input-box">
-            <input id="password" type="password" required>
-            <label>Password</label>
-        </div>
+    <!-- Redirects to login page -->
+    <button onclick="redirectToPage()"
+      class="bg-blue-600 px-4 py-2 rounded-lg hover:bg-blue-700 transition">
+      Login
+    </button>
+  </nav>
+</header>
 
-        <div class="input-box">
-            <input id="confirmPassword" type="password" required>
-            <label>Confirm Password</label>
-        </div>
+<!-- ===================== REGISTER CARD ===================== -->
+<div class="flex justify-center items-center mt-20 px-4">
+  <div class="w-full max-w-md p-10 rounded-2xl bg-white/10 backdrop-blur-xl shadow-xl">
 
-        <!-- SELECT ROLE -->
-        <div class="input-box select-wrapper">
-            <select id="role" class="select-box" required>
-                <option value="" disabled selected></option>
-                <option value="admin">Admin</option>
-                <option value="user">Department User</option>
-            </select>
-            <label>Select Role</label>
-        </div>
+    <!-- Form title -->
+    <h2 class="text-3xl font-bold text-center mb-8">Register</h2>
 
-        <!-- SELECT DEPARTMENT -->
-        <div class="input-box select-wrapper">
-            <select id="department" class="select-box" required>
-                <option value="" disabled selected></option>
-                <option value="IT">IT</option>
-                <option value="Finance">Finance</option>
-                <option value="HR">HR</option>
-                <option value="Logistics">Logistics</option>
-            </select>
-            <label>Select Department</label>
-        </div>
+    <!-- Registration Form -->
+    <form onsubmit="registerUser(event)">
 
-        <button type="submit" class="btn">Create Account</button>
+      <!-- NAME INPUT -->
+      <div class="mb-5">
+        <input id="name" type="text" required
+          class="w-full bg-transparent border border-gray-400 rounded-lg px-4 py-3 outline-none focus:border-blue-400"
+          placeholder="Name">
+      </div>
 
-        <div class="login-register">
-            <p>Already have an account?
-                <a href="login.html">Login</a>
-            </p>
-        </div>
-      </form>
-    </div>
+      <!-- EMAIL INPUT -->
+      <div class="mb-5">
+        <input id="email" type="email" required
+          class="w-full bg-transparent border border-gray-400 rounded-lg px-4 py-3 outline-none focus:border-blue-400"
+          placeholder="Email">
+      </div>
+
+      <!-- PASSWORD INPUT -->
+      <div class="mb-5">
+        <input id="password" type="password" required
+          class="w-full bg-transparent border border-gray-400 rounded-lg px-4 py-3 outline-none focus:border-blue-400"
+          placeholder="Password">
+      </div>
+
+      <!-- CONFIRM PASSWORD -->
+      <div class="mb-5">
+        <input id="confirmPassword" type="password" required
+          class="w-full bg-transparent border border-gray-400 rounded-lg px-4 py-3 outline-none focus:border-blue-400"
+          placeholder="Confirm Password">
+      </div>
+
+      <!-- DEPARTMENT SELECTION -->
+      <div class="mb-8">
+        <select id="department" required
+          class="w-full bg-transparent border border-gray-400 rounded-lg px-4 py-3 outline-none focus:border-blue-400 text-gray-300">
+          
+          <!-- Disabled placeholder -->
+          <option value="" disabled selected>Select Department</option>
+
+          <!-- Department options -->
+          <option value="IT" class="text-black">IT</option>
+          <option value="Finance" class="text-black">Finance</option>
+          <option value="HR" class="text-black">HR</option>
+          <option value="Logistics" class="text-black">Logistics</option>
+        </select>
+      </div>
+
+      <!-- SUBMIT BUTTON -->
+      <button type="submit"
+        class="w-full bg-blue-600 py-3 rounded-lg font-semibold hover:bg-blue-700 transition">
+        Create Account
+      </button>
+
+      <!-- LOGIN LINK -->
+      <p class="text-center mt-6 text-sm">
+        Already have an account?
+        <a href="login.html" class="text-blue-400 hover:underline">
+          Login
+        </a>
+      </p>
+
+    </form>
   </div>
+</div>
 
-  <script>
-    function registerUser(e) {
-        e.preventDefault();
+<!-- ===================== PAGE LOGIC ===================== -->
+<script>
+/**
+ * Handles user registration
+ * - Creates a Firebase Authentication account
+ * - Stores user profile in Firestore
+ * - Sets account as PENDING for admin approval
+ */
+function registerUser(e) {
+  // Prevent default form submission
+  e.preventDefault();
 
-        const name = document.getElementById('name').value;
-        const email = document.getElementById('email').value;
-        const password = document.getElementById('password').value;
-        const confirmPassword = document.getElementById('confirmPassword').value;
-        const role = document.getElementById('role').value;
-        const department = document.getElementById('department').value;
+  // Get user input values
+  const name = document.getElementById("name").value;
+  const email = document.getElementById("email").value;
+  const password = document.getElementById("password").value;
+  const confirmPassword = document.getElementById("confirmPassword").value;
+  const department = document.getElementById("department").value;
 
-        if (password !== confirmPassword) {
-            alert("Passwords don't match");
-            return;
-        }
-
-        auth.createUserWithEmailAndPassword(email, password)
-            .then(cred => {
-                return db.collection("users").doc(cred.user.uid).set({
-                    name,
-                    email,
-                    role,
-                    department,
-                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
-                });
-            })
-            .then(() => {
-                alert("Account created successfully!");
-                window.location.href = "login.html";
-            })
-            .catch(err => alert(err.message));
-    }
-  </script>
-  <script>
-  function redirectToPage(){
-    window.location.href = "login.html";
+  // Validate password confirmation
+  if (password !== confirmPassword) {
+    alert("Passwords do not match");
+    return;
   }
-  </script>
+
+  // 🔐 Create user account in Firebase Authentication
+  auth.createUserWithEmailAndPassword(email, password)
+    .then(async (cred) => {
+
+      // 🗄️ Store user details in Firestore
+      await db.collection("users").doc(cred.user.uid).set({
+        name: name,
+        email: email,
+        role: "user",            // Default role
+        department: department,  // Assigned department
+        approved: false,         // 🔒 Requires admin approval
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+
+      // Notify user
+      alert("Account created. Please wait for admin approval.");
+
+      // Sign out user until approved
+      await auth.signOut();
+
+      // Redirect to login page
+      window.location.href = "login.html";
+    })
+    .catch(err => {
+      // Display any registration errors
+      alert(err.message);
+    });
+}
+
+/**
+ * Redirects user to login page
+ */
+function redirectToPage(){
+  location.href = "login.html";
+}
+</script>
 
 </body>
 </html>
